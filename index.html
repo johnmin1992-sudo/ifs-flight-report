@@ -454,7 +454,7 @@ function togReq(it){
   document.getElementById('ri-'+it.replace(/\s/g,'_')).classList.toggle('checked',reqSt[it]);
 }
 
-// SAVE — duplicate guard: block re-submission within 3 seconds
+// SAVE — duplicate guard on Date + FlightNo + AcReg
 let _saving=false;
 function saveReport(){
   if(_saving){showToast('⚠ PLEASE WAIT...');return;}
@@ -467,18 +467,15 @@ function saveReport(){
   const comp=document.getElementById('f-comp').value;
   if(!date||!rep||!flt||!ac||!std||!start||!comp){showToast('⚠ FILL IN REQUIRED FIELDS');return;}
 
-  // Duplicate content check: same reporter + flight + date + STD = same entry
-  const dupKey=`${date}|${rep}|${flt}|${ac}|${std}`;
-  const existing=getRecs().find(r=>r.dupKey===dupKey);
-  if(existing){showToast('⚠ DUPLICATE: ALREADY SAVED');return;}
+  // Unique: same date + same flight no + same AC = same flight, block it
+  const dupKey=`${date}|${flt.toUpperCase()}|${ac.toUpperCase()}`;
+  const dup=getRecs().find(r=>r.dupKey===dupKey);
+  if(dup){showToast('⚠ DUPLICATE FLIGHT — ALREADY SAVED');return;}
 
   _saving=true;
   const btn=document.querySelector('.sub-btn');
   if(btn){btn.disabled=true;btn.style.opacity='0.6';}
-  setTimeout(()=>{
-    _saving=false;
-    if(btn){btn.disabled=false;btn.style.opacity='';}
-  },3000);
+  setTimeout(()=>{_saving=false;if(btn){btn.disabled=false;btn.style.opacity='';}},3000);
 
   const rec={
     id:Date.now(),dupKey,date,reporter:rep,flightno:flt,acreg:ac,
@@ -488,7 +485,7 @@ function saveReport(){
     comment:document.getElementById('f-comment').value,
     remark:document.getElementById('f-remark').value.trim(),
     requiredList:REQ_ITEMS.filter(i=>reqSt[i]).join(', '),
-    synced:false,syncedAt:null,savedAt:new Date().toISOString()
+    synced:false,savedAt:new Date().toISOString()
   };
   const all=getRecs();
   all.unshift(rec);
@@ -499,7 +496,7 @@ function saveReport(){
   if(navigator.onLine)syncRecord(rec);
 }
 
-// SYNC — prevent double-sync with in-progress tracker
+// SYNC — in-progress guard prevents same record syncing twice simultaneously
 const _syncing=new Set();
 async function syncRecord(rec){
   if(_syncing.has(rec.id))return false;
@@ -530,7 +527,7 @@ function autoSync(){
 function markSynced(id){
   const all=getRecs();
   const idx=all.findIndex(r=>r.id===id);
-  if(idx>-1){all[idx].synced=true;all[idx].syncedAt=new Date().toISOString();localStorage.setItem('ifs_reports',JSON.stringify(all));}
+  if(idx>-1){all[idx].synced=true;localStorage.setItem('ifs_reports',JSON.stringify(all));}
   updateBadge();
 }
 
