@@ -24,20 +24,20 @@ body.dark{
 }
 
 /* HEADER */
-.hdr{background:var(--navy);color:#fff;padding:14px 16px 12px;position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.2);}
-.hdr-left{display:flex;align-items:center;gap:10px;}
+.hdr{background:var(--navy);color:#fff;padding:10px 16px;position:sticky;top:0;z-index:100;display:flex;flex-direction:column;gap:8px;box-shadow:0 2px 8px rgba(0,0,0,.2);}
+.hdr-row1{display:flex;align-items:center;justify-content:space-between;}
+.hdr-row2{display:flex;align-items:center;justify-content:space-between;}
 .hdr-title{font-size:15px;font-weight:700;letter-spacing:.02em;}
-.hdr-sub{font-size:10px;opacity:.65;margin-top:1px;letter-spacing:.04em;}
-.hdr-right{display:flex;align-items:center;gap:8px;}
+.hdr-sub{font-size:10px;opacity:.65;letter-spacing:.04em;}
 
 /* NETWORK PILL */
-.pill{font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;display:flex;align-items:center;gap:4px;letter-spacing:.03em;}
+.pill{font-size:10px;font-weight:700;padding:5px 12px;border-radius:20px;display:flex;align-items:center;gap:5px;letter-spacing:.03em;}
 .pill-offline{background:var(--gold);color:#7A4200;}
 .pill-online{background:#E4F3D8;color:#2D6A0A;}
 
 /* THEME TOGGLE */
-.theme-btn{background:rgba(255,255,255,.15);border:none;border-radius:20px;padding:4px 10px;color:#fff;font-size:10px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:inherit;}
-.theme-btn:active{background:rgba(255,255,255,.25);}
+.theme-btn{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:5px 16px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:inherit;min-height:34px;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
+.theme-btn:active{background:rgba(255,255,255,.32);}
 
 /* BANNER */
 .banner{background:var(--blue-bg);color:var(--blue);font-size:12px;padding:8px 16px;display:none;align-items:center;gap:8px;border-bottom:1px solid #B5D4F4;}
@@ -162,18 +162,16 @@ body.dark .toast{background:var(--gold);color:#1A1A2E;}
 <body>
 
 <div class="hdr">
-  <div class="hdr-left">
-    <div>
-      <div class="hdr-title">IFS FLIGHT REPORT</div>
-      <div class="hdr-sub">MYANMAR AIRWAYS INTERNATIONAL</div>
-    </div>
-  </div>
-  <div class="hdr-right">
-    <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">🌙 DARK</button>
+  <div class="hdr-row1">
+    <div class="hdr-title">IFS FLIGHT REPORT</div>
     <div id="netPill" class="pill pill-offline">
       <svg width="8" height="8" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="currentColor"/></svg>
       OFFLINE
     </div>
+  </div>
+  <div class="hdr-row2">
+    <div class="hdr-sub">MYANMAR AIRWAYS INTERNATIONAL</div>
+    <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">🌙 DARK MODE</button>
   </div>
 </div>
 
@@ -356,13 +354,13 @@ REQ_ITEMS.forEach(i=>reqSt[i]=false);
 function toggleTheme(){
   const dark=document.body.classList.toggle('dark');
   localStorage.setItem('ifs_theme',dark?'dark':'light');
-  document.getElementById('theme-btn').textContent=dark?'☀️ LIGHT':'🌙 DARK';
+  document.getElementById('theme-btn').textContent=dark?'☀️ LIGHT MODE':'🌙 DARK MODE';
   document.querySelector('meta[name=theme-color]').content=dark?'#0F1923':'#1F3864';
 }
 function loadTheme(){
   if(localStorage.getItem('ifs_theme')==='dark'){
     document.body.classList.add('dark');
-    document.getElementById('theme-btn').textContent='☀️ LIGHT';
+    document.getElementById('theme-btn').textContent='☀️ LIGHT MODE';
     document.querySelector('meta[name=theme-color]').content='#0F1923';
   }
 }
