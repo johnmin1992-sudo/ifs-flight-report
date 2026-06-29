@@ -360,18 +360,17 @@ function saveReport(){
 // SYNC SINGLE RECORD
 async function syncRecord(rec){
   try{
-    const res=await fetch(SHEET_URL,{
+    await fetch(SHEET_URL,{
       method:'POST',
+      mode:'no-cors',
       headers:{'Content-Type':'text/plain'},
       body:JSON.stringify(rec)
     });
-    const json=await res.json();
-    if(json.result==='ok'){
-      markSynced(rec.id);
-      return true;
-    }
-  }catch(e){}
-  return false;
+    markSynced(rec.id);
+    return true;
+  }catch(e){
+    return false;
+  }
 }
 
 // SYNC ALL PENDING
