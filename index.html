@@ -115,7 +115,8 @@ body.dark .req-chk.chkd svg{stroke:#1A1A2E;}
 .req-label{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
 
 /* SUBMIT */
-.sub-wrap{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:12px 14px;z-index:100;display:none;}
+.sub-wrap{position:fixed;bottom:56px;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:12px 14px;z-index:100;}
+[data-page=rec] .sub-wrap{display:none;}
 .sub-btn{background:var(--navy);color:#fff;border:none;border-radius:var(--radius);padding:15px;font-size:15px;font-weight:700;width:100%;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;letter-spacing:.04em;}
 .sub-btn:active{background:var(--navy2);}
 body.dark .sub-btn{background:var(--gold);color:#1A1A2E;}
@@ -374,8 +375,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   setupAC();
   loadStaff();
   checkNet();
-  const sw=document.querySelector('.sub-wrap');
-  if(sw)sw.style.display='block';
+
   updateBadge();
   window.addEventListener('online',()=>checkNet());
   window.addEventListener('offline',()=>{const e=document.getElementById('netPill');setOffline(e,document.getElementById('banner'));});
@@ -621,13 +621,12 @@ function resetForm(){
 
 // PAGE NAV
 function showPage(name){
+  document.body.setAttribute('data-page',name);
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('act'));
   document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('act'));
   document.getElementById('page-'+name).classList.add('act');
   document.getElementById('nb-'+name).classList.add('act');
-  // Show SAVE & SYNC only on NEW page
-  const sw=document.querySelector('.sub-wrap');
-  if(sw)sw.style.display=name==='new'?'block':'none';
+
   if(name==='rec')renderRecs();
 }
 
