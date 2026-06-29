@@ -42,6 +42,12 @@ body.dark{
 .theme-btn{background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:5px 16px;color:#fff;font-size:11px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:5px;font-family:inherit;min-height:34px;-webkit-tap-highlight-color:transparent;touch-action:manipulation;}
 .theme-btn:active{background:rgba(255,255,255,.32);}
 
+/* DATE BAR */
+.date-bar{flex:1;margin-left:8px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:5px 16px;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;min-height:34px;letter-spacing:.03em;}
+.date-bar-day{font-weight:800;opacity:.95;}
+.date-bar-sep{opacity:.45;font-weight:400;}
+.date-bar-date{opacity:.80;font-weight:600;}
+
 /* BANNER */
 .banner{background:var(--blue-bg);color:var(--blue);font-size:12px;padding:8px 16px;display:none;align-items:center;gap:8px;border-bottom:1px solid #B5D4F4;}
 .banner.show{display:flex;}
@@ -181,7 +187,13 @@ body.dark .toast{background:var(--gold);color:#1A1A2E;}
   </div>
   <div class="hdr-row2">
     <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">🌙 DARK MODE</button>
-    <div id="net-status" style="font-size:10px;opacity:.6;font-weight:600;"></div>
+    <div class="date-bar">
+      <span class="date-bar-day" id="hdr-day">—</span>
+      <span class="date-bar-sep">·</span>
+      <span class="date-bar-date" id="hdr-date">—</span>
+      <span class="date-bar-sep">·</span>
+      <span class="date-bar-date" id="hdr-time">—</span>
+    </div>
   </div>
 </div>
 
@@ -375,6 +387,8 @@ window.addEventListener('DOMContentLoaded',()=>{
   setupAC();
   loadStaff();
   checkNet();
+  updateHeaderDate();
+  setInterval(updateHeaderDate, 1000);
 
   updateBadge();
   window.addEventListener('online',()=>checkNet());
@@ -638,6 +652,21 @@ function resetForm(){
 }
 
 // PAGE NAV
+function updateHeaderDate(){
+  const now=new Date();
+  const days=['SUN','MON','TUE','WED','THU','FRI','SAT'];
+  const months=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const day=days[now.getDay()];
+  const dd=String(now.getDate()).padStart(2,'0');
+  const mon=months[now.getMonth()];
+  const yyyy=now.getFullYear();
+  const hh=String(now.getHours()).padStart(2,'0');
+  const mm=String(now.getMinutes()).padStart(2,'0');
+  document.getElementById('hdr-day').textContent=day;
+  document.getElementById('hdr-date').textContent=dd+'-'+mon+'-'+yyyy;
+  document.getElementById('hdr-time').textContent=hh+':'+mm+' MMT';
+}
+
 function showPage(name){
   document.body.setAttribute('data-page',name);
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('act'));
