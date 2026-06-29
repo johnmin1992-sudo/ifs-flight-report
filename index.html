@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1F3864">
+<title>IFS Flight Report — MAI</title>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy:#1F3864;--navy2:#2E4E8A;--gold:#EF9F27;--gold-dk:#854F0B;
+  --green:#3B6D11;--green-bg:#EAF3DE;--red:#A32D2D;--red-bg:#FCEBEB;
+  --amber-bg:#FAEEDA;--amber:#854F0B;--blue-bg:#E6F1FB;--blue:#185FA5;
+  --bg:#F4F6FA;--surface:#fff;--border:#D8DEE9;
+  --text:#1A1A2E;--muted:#6B7280;--light:#9CA3AF;--radius:10px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;}
+
+/* HEADER */
+.hdr{background:var(--navy);color:#fff;padding:14px 16px 12px;position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;}
+.hdr-title{font-size:15px;font-weight:600;}
+.hdr-sub{font-size:11px;opacity:.7;margin-top:1px;}
+.pill{font-size:10px;font-weight:600;padding:3px 10px;border-radius:20px;display:flex;align-items:center;gap:4px;}
+.pill-offline{background:var(--gold);color:var(--gold-dk);}
+.pill-online{background:var(--green-bg);color:var(--green);}
+
+/* SYNC BANNER */
+.banner{background:var(--blue-bg);color:var(--blue);font-size:12px;padding:8px 16px;display:none;align-items:center;gap:8px;border-bottom:1px solid #B5D4F4;}
+.banner.show{display:flex;}
+
+/* FORM */
+.wrap{max-width:480px;margin:0 auto;padding:16px 14px 100px;display:flex;flex-direction:column;gap:14px;}
+.card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:14px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+.card-title{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
+.field{display:flex;flex-direction:column;gap:4px;}
+.field label{font-size:11px;font-weight:500;color:var(--muted);}
+input,select,textarea{font-family:inherit;font-size:13px;color:var(--text);background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;width:100%;transition:border-color .15s;-webkit-appearance:none;appearance:none;}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy);background:#fff;}
+input[type=time]{font-family:'Courier New',monospace;font-size:14px;font-weight:600;text-align:center;letter-spacing:.05em;padding:8px 4px;}
+select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;}
+textarea{resize:none;line-height:1.5;}
+
+/* AC SEARCH */
+.ac-wrap{position:relative;}
+.ac-inp{padding-left:32px !important;}
+.ac-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--light);pointer-events:none;}
+.ac-dd{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1.5px solid var(--navy);border-radius:8px;overflow:hidden;z-index:200;box-shadow:0 4px 16px rgba(0,0,0,.12);max-height:200px;overflow-y:auto;}
+.ac-dd.open{display:block;}
+.ac-opt{padding:9px 12px;font-size:13px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;border-bottom:1px solid var(--border);}
+.ac-opt:last-child{border-bottom:none;}
+.ac-opt:hover,.ac-opt.hi{background:var(--blue-bg);}
+.ac-opt.sel{background:#E6F1FB;font-weight:600;color:var(--navy);}
+.ac-badge{font-size:10px;color:var(--muted);background:var(--bg);border:1px solid var(--border);padding:1px 7px;border-radius:20px;}
+
+/* REQUIRED LIST */
+.req-list{display:flex;flex-direction:column;gap:8px;}
+.req-item{display:flex;align-items:center;gap:10px;padding:9px 10px;background:var(--bg);border-radius:8px;cursor:pointer;user-select:none;-webkit-user-select:none;transition:background .1s;}
+.req-item:active{background:var(--blue-bg);}
+.req-chk{width:18px;height:18px;border-radius:4px;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.req-chk.chkd{background:var(--navy);border-color:var(--navy);}
+.req-chk svg{width:11px;height:11px;stroke:#fff;display:none;}
+.req-chk.chkd svg{display:block;}
+.req-label{font-size:13px;}
+
+/* DELAY */
+.delay-sec{display:none;flex-direction:column;gap:10px;}
+.delay-sec.vis{display:flex;}
+.delay-row{display:flex;align-items:center;gap:8px;}
+.delay-row label{font-size:11px;font-weight:500;color:var(--muted);white-space:nowrap;}
+.delay-unit{font-size:12px;color:var(--muted);}
+
+/* SUBMIT */
+.sub-wrap{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:12px 14px;z-index:100;}
+.sub-btn{background:var(--navy);color:#fff;border:none;border-radius:var(--radius);padding:14px;font-size:15px;font-weight:600;width:100%;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;}
+.sub-btn:active{background:var(--navy2);}
+.sub-btn svg{width:18px;height:18px;stroke:#fff;}
+
+/* RECORDS */
+.rec-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 4px rgba(0,0,0,.08);}
+.rec-title{font-size:13px;font-weight:600;}
+.rec-sub{font-size:11px;color:var(--muted);margin-top:2px;}
+.rbadge{font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;}
+.rbadge-p{background:var(--amber-bg);color:var(--amber);}
+.rbadge-s{background:var(--green-bg);color:var(--green);}
+
+/* BOTTOM NAV */
+.bnav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);display:flex;z-index:90;}
+.nbtn{flex:1;padding:10px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:var(--light);cursor:pointer;background:none;border:none;font-family:inherit;}
+.nbtn.act{color:var(--navy);}
+.nbtn svg{width:20px;height:20px;stroke:currentColor;}
+.nbadge{background:var(--red);color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-top:-2px;}
+
+/* PAGES */
+.page{display:none;}
+.page.act{display:block;}
+
+/* TOAST */
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:#1A1A2E;color:#fff;font-size:13px;padding:10px 20px;border-radius:24px;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;z-index:999;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* EMPTY */
+.empty{text-align:center;padding:40px 20px;color:var(--muted);}
+.empty svg{width:48px;height:48px;stroke:var(--light);margin-bottom:12px;}
+.empty p{font-size:14px;}
+</style>
+</head>
+<body>
+
+<div class="hdr">
+  <div>
+    <div class="hdr-title">IFS Flight Report</div>
+    <div class="hdr-sub">Myanmar Airways International</div>
+  </div>
+  <div id="netPill" class="pill pill-offline">
+    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg>
+    Offline
+  </div>
+</div>
+
+<div id="banner" class="banner">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+  Back online — pending records will sync when connected to Google Sheets.
+</div>
+
+<!-- NEW REPORT PAGE -->
+<div id="page-new" class="page act">
+<div class="wrap">
+
+  <div class="card">
+    <div class="card-title">Basic info</div>
+    <div class="row2">
+      <div class="field">
+        <label>Date</label>
+        <input type="date" id="f-date">
+      </div>
+      <div class="field">
+        <label>Reporter name</label>
+        <select id="f-reporter">
+          <option value="">Select...</option>
+          <option>YE WIN AUNG</option>
+          <option>TIN MAUNG NAING</option>
+          <option>HTUT KO KO</option>
+          <option>MIN MIN OO</option>
+          <option>PHYO THURA AUNG</option>
+          <option>KYAW MYO HTWE</option>
+          <option>WIN HTEIN</option>
+          <option>HTOO KO KO</option>
+          <option>NYAN LIN AUNG</option>
+          <option>NYEIN AYE</option>
+          <option>SAW THET HTET AUNG</option>
+          <option>THU HTET AUNG</option>
+          <option>THIHA KO KO</option>
+        </select>
+      </div>
+    </div>
+    <div class="row2">
+      <div class="field">
+        <label>Flight No</label>
+        <input type="text" id="f-flt" placeholder="e.g. 231" inputmode="numeric">
+      </div>
+      <div class="field">
+        <label>AC Reg</label>
+        <div class="ac-wrap">
+          <svg class="ac-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="f-ac-txt" class="ac-inp" placeholder="Search reg..." autocomplete="off">
+          <input type="hidden" id="f-ac-val">
+          <div class="ac-dd" id="ac-dd"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Times (24-hr)</div>
+    <div class="row3">
+      <div class="field"><label>STD</label><input type="time" id="f-std"></div>
+      <div class="field"><label>Start loading</label><input type="time" id="f-start"></div>
+      <div class="field"><label>Complete</label><input type="time" id="f-comp"></div>
+    </div>
+    <div class="row3">
+      <div class="field"><label>Crew arrival</label><input type="time" id="f-carr"></div>
+      <div class="field"><label>Crew check</label><input type="time" id="f-cchk"></div>
+      <div class="field">
+        <label>Comment</label>
+        <select id="f-comment" onchange="onComment()">
+          <option value="">Select...</option>
+          <option value="ON TIME">On time</option>
+          <option value="QTR">QTR</option>
+          <option value="AIC DELAY">AIC delay</option>
+          <option value="CREW DELAY">Crew delay</option>
+          <option value="WX DELAY">WX delay</option>
+          <option value="OTHER">Other</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card delay-sec" id="delay-sec">
+    <div class="card-title">Delay details</div>
+    <div class="delay-row">
+      <label>Delay duration</label>
+      <input type="number" id="f-delay" placeholder="0" min="0" max="999" style="max-width:90px;text-align:center;">
+      <span class="delay-unit">minutes</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Required list</div>
+    <div class="req-list" id="req-list"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Remark</div>
+    <textarea id="f-remark" rows="3" placeholder="Describe reason for delay or any remarks..."></textarea>
+  </div>
+
+</div>
+<div class="sub-wrap">
+  <button class="sub-btn" onclick="saveReport()">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+    Save report
+  </button>
+</div>
+</div>
+
+<!-- RECORDS PAGE -->
+<div id="page-rec" class="page">
+<div class="wrap" style="padding-bottom:80px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;">
+    <div class="card-title" style="font-size:12px;">Saved records</div>
+    <div id="pend-lbl" style="font-size:11px;color:var(--muted);"></div>
+  </div>
+  <div id="rec-list"></div>
+</div>
+</div>
+
+<!-- BOTTOM NAV -->
+<div class="bnav">
+  <button class="nbtn act" id="nb-new" onclick="showPage('new')">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+    New report
+  </button>
+  <button class="nbtn" id="nb-rec" onclick="showPage('rec')">
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
+    Records
+    <div class="nbadge" id="nb-badge" style="display:none;">0</div>
+  </button>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const AC_LIST=[
+  {reg:'ALY',type:'A320'},{reg:'ALZ',type:'A320'},{reg:'ALK',type:'A320'},
+  {reg:'ALT',type:'A320'},{reg:'ALJ',type:'A320'},{reg:'ALN',type:'A320'},
+  {reg:'AGR',type:'ATR72'},{reg:'AGV',type:'ATR72'},{reg:'ALP',type:'ATR72'},
+  {reg:'AMU',type:'ATR72'},{reg:'AMA',type:'ATR72'},{reg:'AMF',type:'ATR72'},
+  {reg:'AJW',type:'ATR72'},{reg:'PK-MYC',type:'B737'},{reg:'RP-C9866',type:'B737'}
+];
+const REQ_ITEMS=['Bar cart','Duty free cart','Standby meal','Linen','Basket','Retort meal'];
+const reqSt={};
+REQ_ITEMS.forEach(i=>reqSt[i]=false);
+
+// INIT
+window.addEventListener('DOMContentLoaded',()=>{
+  const t=new Date();
+  const d=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+  document.getElementById('f-date').value=d;
+  buildReq();
+  setupAC();
+  checkNet();
+  updateBadge();
+  window.addEventListener('online',checkNet);
+  window.addEventListener('offline',checkNet);
+});
+
+function checkNet(){
+  const on=navigator.onLine;
+  const el=document.getElementById('netPill');
+  const bn=document.getElementById('banner');
+  if(on){
+    el.className='pill pill-online';
+    el.innerHTML=`<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg> Online`;
+    bn.classList.add('show');
+    setTimeout(()=>bn.classList.remove('show'),4000);
+  } else {
+    el.className='pill pill-offline';
+    el.innerHTML=`<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg> Offline`;
+  }
+}
+
+// AC SEARCH
+function setupAC(){
+  const inp=document.getElementById('f-ac-txt');
+  const dd=document.getElementById('ac-dd');
+  inp.addEventListener('focus',()=>renderAC(inp.value));
+  inp.addEventListener('input',()=>renderAC(inp.value));
+  document.addEventListener('click',e=>{if(!e.target.closest('.ac-wrap'))dd.classList.remove('open');});
+}
+function renderAC(q){
+  const dd=document.getElementById('ac-dd');
+  const qU=q.toUpperCase().replace(/\s/g,'');
+  const list=qU?AC_LIST.filter(a=>a.reg.replace(/\s/g,'').includes(qU)||a.type.toUpperCase().includes(qU)):AC_LIST;
+  dd.innerHTML=list.map(a=>`<div class="ac-opt" onclick="selAC('${a.reg}','${a.type}')">${a.reg}<span class="ac-badge">${a.type}</span></div>`).join('');
+  dd.classList.toggle('open',list.length>0);
+}
+function selAC(reg,type){
+  document.getElementById('f-ac-txt').value=reg;
+  document.getElementById('f-ac-val').value=reg;
+  document.getElementById('ac-dd').classList.remove('open');
+}
+
+// REQUIRED LIST
+function buildReq(){
+  document.getElementById('req-list').innerHTML=REQ_ITEMS.map(it=>`
+    <div class="req-item" onclick="togReq('${it}')">
+      <div class="req-chk" id="chk-${it.replace(/\s/g,'_')}">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+      </div>
+      <span class="req-label">${it}</span>
+    </div>`).join('');
+}
+function togReq(it){
+  reqSt[it]=!reqSt[it];
+  const el=document.getElementById('chk-'+it.replace(/\s/g,'_'));
+  el.classList.toggle('chkd',reqSt[it]);
+}
+
+// COMMENT
+function onComment(){
+  const v=document.getElementById('f-comment').value;
+  document.getElementById('delay-sec').classList.toggle('vis',v&&v!=='ON TIME');
+}
+
+// SAVE
+function saveReport(){
+  const date=document.getElementById('f-date').value;
+  const rep=document.getElementById('f-reporter').value;
+  const flt=document.getElementById('f-flt').value.trim();
+  const ac=document.getElementById('f-ac-val').value||document.getElementById('f-ac-txt').value.trim();
+  const std=document.getElementById('f-std').value;
+  const start=document.getElementById('f-start').value;
+  const comp=document.getElementById('f-comp').value;
+  if(!date||!rep||!flt||!ac||!std||!start||!comp){showToast('⚠ Please fill in required fields');return;}
+  const rec={
+    id:Date.now(),date,reporter:rep,flightno:flt,acreg:ac,
+    std,start,complete:comp,
+    crewArr:document.getElementById('f-carr').value,
+    crewChk:document.getElementById('f-cchk').value,
+    comment:document.getElementById('f-comment').value,
+    delayMin:document.getElementById('f-delay').value,
+    remark:document.getElementById('f-remark').value.trim(),
+    requiredList:REQ_ITEMS.filter(i=>reqSt[i]).join(', '),
+    synced:false,savedAt:new Date().toISOString()
+  };
+  const all=getRecs();
+  all.unshift(rec);
+  localStorage.setItem('ifs_reports',JSON.stringify(all));
+  showToast('✓ Report saved locally');
+  resetForm();
+  updateBadge();
+}
+
+// RECORDS
+function getRecs(){try{return JSON.parse(localStorage.getItem('ifs_reports')||'[]');}catch{return[];}}
+function renderRecs(){
+  const list=document.getElementById('rec-list');
+  const recs=getRecs();
+  const pend=recs.filter(r=>!r.synced).length;
+  document.getElementById('pend-lbl').textContent=pend>0?`${pend} pending sync`:'All synced';
+  if(!recs.length){
+    list.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>No reports saved yet</p></div>';
+    return;
+  }
+  list.innerHTML=recs.map(r=>`
+    <div class="rec-card" style="margin-bottom:8px;">
+      <div><div class="rec-title">Flight ${r.flightno} · ${r.acreg}</div><div class="rec-sub">${r.date} · ${r.reporter} · ${r.comment||'—'}</div></div>
+      <span class="rbadge ${r.synced?'rbadge-s':'rbadge-p'}">${r.synced?'Synced':'Pending'}</span>
+    </div>`).join('');
+}
+function updateBadge(){
+  const pend=getRecs().filter(r=>!r.synced).length;
+  const b=document.getElementById('nb-badge');
+  b.style.display=pend>0?'block':'none';
+  b.textContent=pend;
+}
+
+// RESET
+function resetForm(){
+  ['f-flt','f-ac-txt','f-ac-val','f-std','f-start','f-comp','f-carr','f-cchk','f-delay','f-remark'].forEach(id=>{document.getElementById(id).value='';});
+  document.getElementById('f-comment').value='';
+  document.getElementById('delay-sec').classList.remove('vis');
+  REQ_ITEMS.forEach(i=>{
+    reqSt[i]=false;
+    const el=document.getElementById('chk-'+i.replace(/\s/g,'_'));
+    if(el)el.classList.remove('chkd');
+  });
+}
+
+// PAGE NAV
+function showPage(name){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('act'));
+  document.querySelectorAll('.nbtn').forEach(b=>b.classList.remove('act'));
+  document.getElementById('page-'+name).classList.add('act');
+  document.getElementById('nb-'+name).classList.add('act');
+  if(name==='rec')renderRecs();
+}
+
+// TOAST
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
+}
+  // SERVICE WORKER
+  if("serviceWorker" in navigator){
+    navigator.serviceWorker.register("sw.js").catch(()=>{});
+  }
+</script>
+</body>
+</html>

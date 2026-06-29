@@ -1,0 +1,14 @@
+{
+  "name": "IFS Flight Report — MAI",
+  "short_name": "IFS Report",
+  "description": "Myanmar Airways International Inflight Services Flight Report",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F4F6FA",
+  "theme_color": "#1F3864",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
