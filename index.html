@@ -530,10 +530,28 @@ async function syncRecord(rec){
   if(_syncing.has(rec.id))return false;
   _syncing.add(rec.id);
   try{
-    await fetch(SHEET_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(rec)});
+    const res=await fetch(SHEET_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(rec)});
+    const data=await res.json();
+    if(data.result==='duplicate'){
+      // Mark as synced so it stops retrying, but warn the user
+      markSynced(rec.id);
+      showToast('⚠ FLT '+rec.flightno+'/'+rec.acreg+' ALREADY IN SHEET — DUPLICATE');
+      return false;
+    }
+    if(data.result==='unauthorized'){
+      showToast('⚠ SYNC REJECTED — CONTACT ADMIN');
+      return false;
+    }
     markSynced(rec.id);
     return true;
-  }catch(e){return false;}
+  }catch(e){
+    // CORS fallback — no-cors mode (can't read response)
+    try{
+      await fetch(SHEET_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(rec)});
+      markSynced(rec.id);
+      return true;
+    }catch(e2){return false;}
+  }
   finally{_syncing.delete(rec.id);}
 }
 async function syncAll(){
