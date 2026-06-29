@@ -126,6 +126,9 @@ body.dark .sub-btn:active{background:#D4920A;}
 .rbadge{font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;}
 .rbadge-p{background:var(--amber-bg);color:var(--amber);}
 .rbadge-s{background:var(--green-bg);color:var(--green);}
+.del-btn{background:none;border:none;cursor:pointer;padding:6px;border-radius:6px;color:var(--light);display:flex;align-items:center;flex-shrink:0;}
+.del-btn:hover{background:var(--red-bg);color:var(--red);}
+.del-btn svg{width:16px;height:16px;stroke:currentColor;}
 
 /* SYNC BTN */
 .sync-btn{background:var(--blue-bg);color:var(--blue);border:1.5px solid #B5D4F4;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:inherit;}
@@ -553,6 +556,18 @@ function markSynced(id){
 
 // RECORDS
 function getRecs(){try{return JSON.parse(localStorage.getItem('ifs_reports')||'[]');}catch{return[];}}
+function deleteRec(id){
+  const rec=getRecs().find(r=>r.id===id);
+  if(!rec)return;
+  const label='FLIGHT '+rec.flightno+' / '+rec.acreg+' ('+rec.date+')';
+  if(!confirm('DELETE '+label+'?\nApp record only — Sheet row must be deleted manually.'))return;
+  const all=getRecs().filter(r=>r.id!==id);
+  localStorage.setItem('ifs_reports',JSON.stringify(all));
+  showToast('🗑 DELETED');
+  renderRecs();
+  updateBadge();
+}
+
 function renderRecs(){
   const list=document.getElementById('rec-list');
   const recs=getRecs();
@@ -564,11 +579,16 @@ function renderRecs(){
   }
   list.innerHTML=recs.map(r=>`
     <div class="rec-card">
-      <div>
+      <div style="flex:1;min-width:0;">
         <div class="rec-title">FLIGHT ${r.flightno} · ${r.acreg}</div>
         <div class="rec-sub">${r.date} · ${r.reporter} · ${r.comment||'—'}</div>
       </div>
-      <span class="rbadge ${r.synced?'rbadge-s':'rbadge-p'}">${r.synced?'SYNCED':'PENDING'}</span>
+      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+        <span class="rbadge ${r.synced?'rbadge-s':'rbadge-p'}">${r.synced?'SYNCED':'PENDING'}</span>
+        <button class="del-btn" onclick="deleteRec(${r.id})" title="DELETE">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>
+      </div>
     </div>`).join('');
 }
 function updateBadge(){
