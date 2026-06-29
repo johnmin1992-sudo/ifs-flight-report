@@ -469,8 +469,14 @@ function saveReport(){
 
   // Unique: same date + same flight no + same AC = same flight, block it
   const dupKey=`${date}|${flt.toUpperCase()}|${ac.toUpperCase()}`;
-  const dup=getRecs().find(r=>r.dupKey===dupKey);
-  if(dup){showToast('⚠ DUPLICATE FLIGHT — ALREADY SAVED');return;}
+  // Compare both dupKey field AND raw fields (covers old records without dupKey)
+  const dup=getRecs().find(r=>
+    r.dupKey===dupKey ||
+    (r.date===date &&
+     r.flightno.trim().toUpperCase()===flt.toUpperCase() &&
+     (r.acreg||'').trim().toUpperCase()===ac.toUpperCase())
+  );
+  if(dup){showToast('⚠ DUPLICATE: FLT '+flt+' / '+ac+' ALREADY SAVED');return;}
 
   _saving=true;
   const btn=document.querySelector('.sub-btn');
