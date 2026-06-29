@@ -1,4 +1,4 @@
-const CACHE = 'ifs-report-v1';
+const CACHE = 'ifs-report-v2';
 const ASSETS = ['/', '/index.html'];
 
 self.addEventListener('install', e => {
