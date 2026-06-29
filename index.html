@@ -65,13 +65,6 @@ textarea{resize:none;line-height:1.5;}
 .req-chk.chkd svg{display:block;}
 .req-label{font-size:13px;}
 
-/* DELAY */
-.delay-sec{display:none;flex-direction:column;gap:10px;}
-.delay-sec.vis{display:flex;}
-.delay-row{display:flex;align-items:center;gap:8px;}
-.delay-row label{font-size:11px;font-weight:500;color:var(--muted);white-space:nowrap;}
-.delay-unit{font-size:12px;color:var(--muted);}
-
 /* SUBMIT */
 .sub-wrap{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:12px 14px;z-index:100;}
 .sub-btn{background:var(--navy);color:#fff;border:none;border-radius:var(--radius);padding:14px;font-size:15px;font-weight:600;width:100%;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;}
@@ -85,6 +78,12 @@ textarea{resize:none;line-height:1.5;}
 .rbadge{font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;}
 .rbadge-p{background:var(--amber-bg);color:var(--amber);}
 .rbadge-s{background:var(--green-bg);color:var(--green);}
+
+/* SYNC BTN */
+.sync-btn{background:var(--blue-bg);color:var(--blue);border:1.5px solid #B5D4F4;border-radius:8px;padding:9px 14px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:inherit;}
+.sync-btn:active{background:#d0e8f9;}
+.sync-btn svg{width:14px;height:14px;stroke:currentColor;}
+.sync-btn:disabled{opacity:.5;cursor:not-allowed;}
 
 /* BOTTOM NAV */
 .bnav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);display:flex;z-index:90;}
@@ -122,7 +121,7 @@ textarea{resize:none;line-height:1.5;}
 
 <div id="banner" class="banner">
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-  Back online — pending records will sync when connected to Google Sheets.
+  Back online — syncing pending records to Google Sheets...
 </div>
 
 <!-- NEW REPORT PAGE -->
@@ -185,7 +184,7 @@ textarea{resize:none;line-height:1.5;}
       <div class="field"><label>Crew check</label><input type="time" id="f-cchk"></div>
       <div class="field">
         <label>Comment</label>
-        <select id="f-comment" onchange="onComment()">
+        <select id="f-comment">
           <option value="">Select...</option>
           <option value="ON TIME">On time</option>
           <option value="QTR">QTR</option>
@@ -198,15 +197,6 @@ textarea{resize:none;line-height:1.5;}
     </div>
   </div>
 
-  <div class="card delay-sec" id="delay-sec">
-    <div class="card-title">Delay details</div>
-    <div class="delay-row">
-      <label>Delay duration</label>
-      <input type="number" id="f-delay" placeholder="0" min="0" max="999" style="max-width:90px;text-align:center;">
-      <span class="delay-unit">minutes</span>
-    </div>
-  </div>
-
   <div class="card">
     <div class="card-title">Required list</div>
     <div class="req-list" id="req-list"></div>
@@ -214,14 +204,14 @@ textarea{resize:none;line-height:1.5;}
 
   <div class="card">
     <div class="card-title">Remark</div>
-    <textarea id="f-remark" rows="3" placeholder="Describe reason for delay or any remarks..."></textarea>
+    <textarea id="f-remark" rows="3" placeholder="Any remarks..."></textarea>
   </div>
 
 </div>
 <div class="sub-wrap">
   <button class="sub-btn" onclick="saveReport()">
     <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-    Save report
+    Save & Sync
   </button>
 </div>
 </div>
@@ -229,9 +219,15 @@ textarea{resize:none;line-height:1.5;}
 <!-- RECORDS PAGE -->
 <div id="page-rec" class="page">
 <div class="wrap" style="padding-bottom:80px;">
-  <div style="display:flex;align-items:center;justify-content:space-between;">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
     <div class="card-title" style="font-size:12px;">Saved records</div>
-    <div id="pend-lbl" style="font-size:11px;color:var(--muted);"></div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <div id="pend-lbl" style="font-size:11px;color:var(--muted);"></div>
+      <button class="sync-btn" id="sync-btn" onclick="syncAll()">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        Sync all
+      </button>
+    </div>
   </div>
   <div id="rec-list"></div>
 </div>
@@ -253,6 +249,8 @@ textarea{resize:none;line-height:1.5;}
 <div class="toast" id="toast"></div>
 
 <script>
+const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzOQ3XZrlYkFW6viwVt2o_ncEra_7RDHZRs5Rj0FZACAJ9qOf9oaORe_cdztQYvhO3s/exec';
+
 const AC_LIST=[
   {reg:'ALY',type:'A320'},{reg:'ALZ',type:'A320'},{reg:'ALK',type:'A320'},
   {reg:'ALT',type:'A320'},{reg:'ALJ',type:'A320'},{reg:'ALN',type:'A320'},
@@ -273,7 +271,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   setupAC();
   checkNet();
   updateBadge();
-  window.addEventListener('online',checkNet);
+  window.addEventListener('online',()=>{checkNet();autoSync();});
   window.addEventListener('offline',checkNet);
 });
 
@@ -285,7 +283,7 @@ function checkNet(){
     el.className='pill pill-online';
     el.innerHTML=`<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg> Online`;
     bn.classList.add('show');
-    setTimeout(()=>bn.classList.remove('show'),4000);
+    setTimeout(()=>bn.classList.remove('show'),3000);
   } else {
     el.className='pill pill-offline';
     el.innerHTML=`<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg> Offline`;
@@ -329,12 +327,6 @@ function togReq(it){
   el.classList.toggle('chkd',reqSt[it]);
 }
 
-// COMMENT
-function onComment(){
-  const v=document.getElementById('f-comment').value;
-  document.getElementById('delay-sec').classList.toggle('vis',v&&v!=='ON TIME');
-}
-
 // SAVE
 function saveReport(){
   const date=document.getElementById('f-date').value;
@@ -351,7 +343,6 @@ function saveReport(){
     crewArr:document.getElementById('f-carr').value,
     crewChk:document.getElementById('f-cchk').value,
     comment:document.getElementById('f-comment').value,
-    delayMin:document.getElementById('f-delay').value,
     remark:document.getElementById('f-remark').value.trim(),
     requiredList:REQ_ITEMS.filter(i=>reqSt[i]).join(', '),
     synced:false,savedAt:new Date().toISOString()
@@ -359,8 +350,59 @@ function saveReport(){
   const all=getRecs();
   all.unshift(rec);
   localStorage.setItem('ifs_reports',JSON.stringify(all));
-  showToast('✓ Report saved locally');
+  showToast('✓ Saved locally');
   resetForm();
+  updateBadge();
+  // Try sync immediately if online
+  if(navigator.onLine) syncRecord(rec);
+}
+
+// SYNC SINGLE RECORD
+async function syncRecord(rec){
+  try{
+    const res=await fetch(SHEET_URL,{
+      method:'POST',
+      headers:{'Content-Type':'text/plain'},
+      body:JSON.stringify(rec)
+    });
+    const json=await res.json();
+    if(json.result==='ok'){
+      markSynced(rec.id);
+      return true;
+    }
+  }catch(e){}
+  return false;
+}
+
+// SYNC ALL PENDING
+async function syncAll(){
+  if(!navigator.onLine){showToast('⚠ No internet connection');return;}
+  const btn=document.getElementById('sync-btn');
+  btn.disabled=true;
+  btn.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke-width="2" style="animation:spin 1s linear infinite"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Syncing...`;
+  const pending=getRecs().filter(r=>!r.synced);
+  let ok=0;
+  for(const r of pending){
+    const res=await syncRecord(r);
+    if(res)ok++;
+  }
+  btn.disabled=false;
+  btn.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Sync all`;
+  showToast(ok>0?`✓ Synced ${ok} record${ok>1?'s':''}`:'Nothing new to sync');
+  renderRecs();
+  updateBadge();
+}
+
+// AUTO SYNC ON RECONNECT
+function autoSync(){
+  const pending=getRecs().filter(r=>!r.synced);
+  if(pending.length>0) syncAll();
+}
+
+function markSynced(id){
+  const all=getRecs();
+  const idx=all.findIndex(r=>r.id===id);
+  if(idx>-1){all[idx].synced=true;localStorage.setItem('ifs_reports',JSON.stringify(all));}
   updateBadge();
 }
 
@@ -370,14 +412,17 @@ function renderRecs(){
   const list=document.getElementById('rec-list');
   const recs=getRecs();
   const pend=recs.filter(r=>!r.synced).length;
-  document.getElementById('pend-lbl').textContent=pend>0?`${pend} pending sync`:'All synced';
+  document.getElementById('pend-lbl').textContent=pend>0?`${pend} pending`:'All synced ✓';
   if(!recs.length){
     list.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>No reports saved yet</p></div>';
     return;
   }
   list.innerHTML=recs.map(r=>`
     <div class="rec-card" style="margin-bottom:8px;">
-      <div><div class="rec-title">Flight ${r.flightno} · ${r.acreg}</div><div class="rec-sub">${r.date} · ${r.reporter} · ${r.comment||'—'}</div></div>
+      <div>
+        <div class="rec-title">Flight ${r.flightno} · ${r.acreg}</div>
+        <div class="rec-sub">${r.date} · ${r.reporter} · ${r.comment||'—'}</div>
+      </div>
       <span class="rbadge ${r.synced?'rbadge-s':'rbadge-p'}">${r.synced?'Synced':'Pending'}</span>
     </div>`).join('');
 }
@@ -390,14 +435,17 @@ function updateBadge(){
 
 // RESET
 function resetForm(){
-  ['f-flt','f-ac-txt','f-ac-val','f-std','f-start','f-comp','f-carr','f-cchk','f-delay','f-remark'].forEach(id=>{document.getElementById(id).value='';});
+  ['f-flt','f-ac-txt','f-ac-val','f-std','f-start','f-comp','f-carr','f-cchk','f-remark'].forEach(id=>{document.getElementById(id).value='';});
   document.getElementById('f-comment').value='';
-  document.getElementById('delay-sec').classList.remove('vis');
+  document.getElementById('f-reporter').value='';
   REQ_ITEMS.forEach(i=>{
     reqSt[i]=false;
     const el=document.getElementById('chk-'+i.replace(/\s/g,'_'));
     if(el)el.classList.remove('chkd');
   });
+  // Reset date to today
+  const t=new Date();
+  document.getElementById('f-date').value=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
 }
 
 // PAGE NAV
@@ -415,10 +463,16 @@ function showToast(msg){
   t.textContent=msg;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),2500);
 }
-  // SERVICE WORKER
-  if("serviceWorker" in navigator){
-    navigator.serviceWorker.register("sw.js").catch(()=>{});
-  }
+
+// SPIN ANIMATION
+const style=document.createElement('style');
+style.textContent='@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}';
+document.head.appendChild(style);
+
+// SERVICE WORKER
+if("serviceWorker" in navigator){
+  navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
 </script>
 </body>
 </html>
