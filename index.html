@@ -5,213 +5,304 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="theme-color" content="#1F3864">
-<title>IFS Flight Report — MAI</title>
+<title>IFS FLIGHT REPORT — MAI</title>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --navy:#1F3864;--navy2:#2E4E8A;--gold:#EF9F27;--gold-dk:#854F0B;
-  --green:#3B6D11;--green-bg:#EAF3DE;--red:#A32D2D;--red-bg:#FCEBEB;
+  --navy:#1F3864;--navy2:#2E4E8A;--gold:#EF9F27;--gold-dk:#C17D0A;
+  --green:#2D6A0A;--green-bg:#E4F3D8;--red:#A32D2D;--red-bg:#FCEBEB;
   --amber-bg:#FAEEDA;--amber:#854F0B;--blue-bg:#E6F1FB;--blue:#185FA5;
-  --bg:#F4F6FA;--surface:#fff;--border:#D8DEE9;
-  --text:#1A1A2E;--muted:#6B7280;--light:#9CA3AF;--radius:10px;
+  --bg:#F0F2F7;--surface:#FFFFFF;--border:#D0D7E3;
+  --text:#1A1A2E;--muted:#5A6478;--light:#9CA3AF;--radius:12px;
+  --card-shadow:0 2px 8px rgba(0,0,0,.09);
 }
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;-webkit-font-smoothing:antialiased;}
+body.dark{
+  --bg:#0F1923;--surface:#1A2535;--border:#2A3A50;
+  --text:#E8EDF5;--muted:#8A9BB5;--light:#4A5A70;
+  --blue-bg:#162030;--card-shadow:0 2px 8px rgba(0,0,0,.35);
+}
 
 /* HEADER */
-.hdr{background:var(--navy);color:#fff;padding:14px 16px 12px;position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;}
-.hdr-title{font-size:15px;font-weight:600;}
-.hdr-sub{font-size:11px;opacity:.7;margin-top:1px;}
-.pill{font-size:10px;font-weight:600;padding:3px 10px;border-radius:20px;display:flex;align-items:center;gap:4px;}
-.pill-offline{background:var(--gold);color:var(--gold-dk);}
-.pill-online{background:var(--green-bg);color:var(--green);}
+.hdr{background:var(--navy);color:#fff;padding:14px 16px 12px;position:sticky;top:0;z-index:100;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,.2);}
+.hdr-left{display:flex;align-items:center;gap:10px;}
+.hdr-title{font-size:15px;font-weight:700;letter-spacing:.02em;}
+.hdr-sub{font-size:10px;opacity:.65;margin-top:1px;letter-spacing:.04em;}
+.hdr-right{display:flex;align-items:center;gap:8px;}
 
-/* SYNC BANNER */
+/* NETWORK PILL */
+.pill{font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;display:flex;align-items:center;gap:4px;letter-spacing:.03em;}
+.pill-offline{background:var(--gold);color:#7A4200;}
+.pill-online{background:#E4F3D8;color:#2D6A0A;}
+
+/* THEME TOGGLE */
+.theme-btn{background:rgba(255,255,255,.15);border:none;border-radius:20px;padding:4px 10px;color:#fff;font-size:10px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:4px;font-family:inherit;}
+.theme-btn:active{background:rgba(255,255,255,.25);}
+
+/* BANNER */
 .banner{background:var(--blue-bg);color:var(--blue);font-size:12px;padding:8px 16px;display:none;align-items:center;gap:8px;border-bottom:1px solid #B5D4F4;}
 .banner.show{display:flex;}
+body.dark .banner{background:#162030;color:#7AB3E0;border-color:#1E3A55;}
 
 /* FORM */
-.wrap{max-width:480px;margin:0 auto;padding:16px 14px 100px;display:flex;flex-direction:column;gap:14px;}
-.card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:14px;display:flex;flex-direction:column;gap:12px;box-shadow:0 1px 4px rgba(0,0,0,.08);}
-.card-title{font-size:10px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;}
+.wrap{max-width:480px;margin:0 auto;padding:16px 14px 100px;display:flex;flex-direction:column;gap:12px;}
+
+/* CARD */
+.card{background:var(--surface);border-radius:var(--radius);border:1px solid var(--border);padding:16px;display:flex;flex-direction:column;gap:10px;box-shadow:var(--card-shadow);}
+.card-title{font-size:10px;font-weight:700;color:var(--gold-dk);text-transform:uppercase;letter-spacing:.1em;padding-bottom:4px;border-bottom:2px solid var(--gold);display:inline-block;}
+body.dark .card-title{color:var(--gold);}
+
+/* FIELDS — full width rows */
+.field{display:flex;flex-direction:column;gap:5px;}
+.field label{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;}
+input,select,textarea{
+  font-family:inherit;font-size:14px;color:var(--text);
+  background:var(--bg);border:1.5px solid var(--border);
+  border-radius:8px;padding:10px 12px;width:100%;
+  transition:border-color .15s,background .15s;
+  -webkit-appearance:none;appearance:none;
+}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy);background:var(--surface);}
+body.dark input,body.dark select,body.dark textarea{background:#111D2B;color:var(--text);}
+body.dark input:focus,body.dark select:focus,body.dark textarea:focus{background:#162030;border-color:var(--gold);}
+
+/* TIME INPUT */
+input[type=time]{
+  font-family:'Courier New',monospace;font-size:16px;font-weight:700;
+  text-align:center;letter-spacing:.08em;padding:10px 4px;
+  color:var(--navy);
+}
+body.dark input[type=time]{color:var(--gold);}
+
+/* ROW GRID — 2 col for time fields only */
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .row3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;}
-.field{display:flex;flex-direction:column;gap:4px;}
-.field label{font-size:11px;font-weight:500;color:var(--muted);}
-input,select,textarea{font-family:inherit;font-size:13px;color:var(--text);background:var(--bg);border:1.5px solid var(--border);border-radius:8px;padding:8px 10px;width:100%;transition:border-color .15s;-webkit-appearance:none;appearance:none;}
-input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy);background:#fff;}
-input[type=time]{font-family:'Courier New',monospace;font-size:14px;font-weight:600;text-align:center;letter-spacing:.05em;padding:8px 4px;}
-select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;}
+
+/* SELECT ARROW */
+select{
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236B7280' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;
+}
 textarea{resize:none;line-height:1.5;}
 
 /* AC SEARCH */
 .ac-wrap{position:relative;}
-.ac-inp{padding-left:32px !important;}
-.ac-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--light);pointer-events:none;}
-.ac-dd{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1.5px solid var(--navy);border-radius:8px;overflow:hidden;z-index:200;box-shadow:0 4px 16px rgba(0,0,0,.12);max-height:200px;overflow-y:auto;}
+.ac-inp{padding-left:36px !important;}
+.ac-icon{position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--light);pointer-events:none;}
+.ac-dd{display:none;position:absolute;top:calc(100% + 4px);left:0;right:0;background:var(--surface);border:1.5px solid var(--navy);border-radius:10px;overflow:hidden;z-index:200;box-shadow:0 6px 20px rgba(0,0,0,.15);max-height:220px;overflow-y:auto;}
+body.dark .ac-dd{border-color:var(--gold);box-shadow:0 6px 20px rgba(0,0,0,.4);}
 .ac-dd.open{display:block;}
-.ac-opt{padding:9px 12px;font-size:13px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;border-bottom:1px solid var(--border);}
+.ac-opt{padding:10px 14px;font-size:13px;font-weight:600;display:flex;align-items:center;cursor:pointer;border-bottom:1px solid var(--border);}
 .ac-opt:last-child{border-bottom:none;}
 .ac-opt:hover,.ac-opt.hi{background:var(--blue-bg);}
-.ac-opt.sel{background:#E6F1FB;font-weight:600;color:var(--navy);}
-.ac-badge{font-size:10px;color:var(--muted);background:var(--bg);border:1px solid var(--border);padding:1px 7px;border-radius:20px;}
+body.dark .ac-opt:hover{background:#162030;}
 
 /* REQUIRED LIST */
-.req-list{display:flex;flex-direction:column;gap:8px;}
-.req-item{display:flex;align-items:center;gap:10px;padding:9px 10px;background:var(--bg);border-radius:8px;cursor:pointer;user-select:none;-webkit-user-select:none;transition:background .1s;}
-.req-item:active{background:var(--blue-bg);}
-.req-chk{width:18px;height:18px;border-radius:4px;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;}
+.req-list{display:flex;flex-direction:column;gap:6px;}
+.req-item{display:flex;align-items:center;gap:12px;padding:11px 12px;background:var(--bg);border-radius:8px;cursor:pointer;user-select:none;-webkit-user-select:none;border:1.5px solid transparent;transition:all .12s;}
+.req-item:active,.req-item.checked{background:var(--blue-bg);border-color:#B5D4F4;}
+body.dark .req-item{background:#111D2B;}
+body.dark .req-item.checked{background:#162030;border-color:#1E4A70;}
+.req-chk{width:20px;height:20px;border-radius:5px;border:2px solid var(--border);flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s;}
 .req-chk.chkd{background:var(--navy);border-color:var(--navy);}
-.req-chk svg{width:11px;height:11px;stroke:#fff;display:none;}
+body.dark .req-chk.chkd{background:var(--gold);border-color:var(--gold);}
+.req-chk svg{width:12px;height:12px;stroke:#fff;display:none;}
+body.dark .req-chk.chkd svg{stroke:#1A1A2E;}
 .req-chk.chkd svg{display:block;}
-.req-label{font-size:13px;}
+.req-label{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.04em;}
 
 /* SUBMIT */
 .sub-wrap{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:12px 14px;z-index:100;}
-.sub-btn{background:var(--navy);color:#fff;border:none;border-radius:var(--radius);padding:14px;font-size:15px;font-weight:600;width:100%;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;}
+.sub-btn{background:var(--navy);color:#fff;border:none;border-radius:var(--radius);padding:15px;font-size:15px;font-weight:700;width:100%;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;letter-spacing:.04em;}
 .sub-btn:active{background:var(--navy2);}
-.sub-btn svg{width:18px;height:18px;stroke:#fff;}
+body.dark .sub-btn{background:var(--gold);color:#1A1A2E;}
+body.dark .sub-btn:active{background:#D4920A;}
+.sub-btn svg{width:18px;height:18px;stroke:currentColor;}
 
 /* RECORDS */
-.rec-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 4px rgba(0,0,0,.08);}
-.rec-title{font-size:13px;font-weight:600;}
-.rec-sub{font-size:11px;color:var(--muted);margin-top:2px;}
-.rbadge{font-size:10px;font-weight:600;padding:3px 9px;border-radius:20px;}
+.rec-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:13px 15px;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--card-shadow);margin-bottom:8px;}
+.rec-title{font-size:13px;font-weight:700;}
+.rec-sub{font-size:11px;color:var(--muted);margin-top:3px;}
+.rbadge{font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;}
 .rbadge-p{background:var(--amber-bg);color:var(--amber);}
 .rbadge-s{background:var(--green-bg);color:var(--green);}
 
 /* SYNC BTN */
-.sync-btn{background:var(--blue-bg);color:var(--blue);border:1.5px solid #B5D4F4;border-radius:8px;padding:9px 14px;font-size:12px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:inherit;}
-.sync-btn:active{background:#d0e8f9;}
-.sync-btn svg{width:14px;height:14px;stroke:currentColor;}
+.sync-btn{background:var(--blue-bg);color:var(--blue);border:1.5px solid #B5D4F4;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:inherit;}
+.sync-btn:active{opacity:.8;}
 .sync-btn:disabled{opacity:.5;cursor:not-allowed;}
+body.dark .sync-btn{background:#162030;color:#7AB3E0;border-color:#1E3A55;}
 
 /* BOTTOM NAV */
 .bnav{position:fixed;bottom:0;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);display:flex;z-index:90;}
-.nbtn{flex:1;padding:10px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;color:var(--light);cursor:pointer;background:none;border:none;font-family:inherit;}
+.nbtn{flex:1;padding:10px 4px 8px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:10px;font-weight:600;color:var(--light);cursor:pointer;background:none;border:none;font-family:inherit;text-transform:uppercase;letter-spacing:.04em;}
 .nbtn.act{color:var(--navy);}
-.nbtn svg{width:20px;height:20px;stroke:currentColor;}
-.nbadge{background:var(--red);color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;margin-top:-2px;}
+body.dark .nbtn.act{color:var(--gold);}
+.nbtn svg{width:22px;height:22px;stroke:currentColor;}
+.nbadge{background:var(--red);color:#fff;font-size:9px;padding:1px 6px;border-radius:10px;margin-top:-2px;}
 
 /* PAGES */
 .page{display:none;}
 .page.act{display:block;}
 
 /* TOAST */
-.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:#1A1A2E;color:#fff;font-size:13px;padding:10px 20px;border-radius:24px;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;z-index:999;}
+.toast{position:fixed;bottom:80px;left:50%;transform:translateX(-50%) translateY(20px);background:#1A1A2E;color:#fff;font-size:13px;font-weight:600;padding:11px 22px;border-radius:24px;opacity:0;transition:all .25s;pointer-events:none;white-space:nowrap;z-index:999;}
+body.dark .toast{background:var(--gold);color:#1A1A2E;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 
 /* EMPTY */
-.empty{text-align:center;padding:40px 20px;color:var(--muted);}
-.empty svg{width:48px;height:48px;stroke:var(--light);margin-bottom:12px;}
-.empty p{font-size:14px;}
+.empty{text-align:center;padding:48px 20px;color:var(--muted);}
+.empty svg{width:52px;height:52px;stroke:var(--light);margin-bottom:14px;}
+.empty p{font-size:14px;font-weight:500;}
+
+/* SPIN */
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
 
 <div class="hdr">
-  <div>
-    <div class="hdr-title">IFS Flight Report</div>
-    <div class="hdr-sub">Myanmar Airways International</div>
+  <div class="hdr-left">
+    <div>
+      <div class="hdr-title">IFS FLIGHT REPORT</div>
+      <div class="hdr-sub">MYANMAR AIRWAYS INTERNATIONAL</div>
+    </div>
   </div>
-  <div id="netPill" class="pill pill-offline">
-    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg>
-    Offline
+  <div class="hdr-right">
+    <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">🌙 DARK</button>
+    <div id="netPill" class="pill pill-offline">
+      <svg width="8" height="8" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="currentColor"/></svg>
+      OFFLINE
+    </div>
   </div>
 </div>
 
 <div id="banner" class="banner">
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-  Back online — syncing pending records to Google Sheets...
+  BACK ONLINE — SYNCING PENDING RECORDS...
 </div>
 
 <!-- NEW REPORT PAGE -->
 <div id="page-new" class="page act">
 <div class="wrap">
 
+  <!-- BASIC INFO -->
   <div class="card">
-    <div class="card-title">Basic info</div>
-    <div class="row2">
-      <div class="field">
-        <label>Date</label>
-        <input type="date" id="f-date">
-      </div>
-      <div class="field">
-        <label>Reporter name</label>
-        <select id="f-reporter">
-          <option value="">Select...</option>
-          <option>YE WIN AUNG</option>
-          <option>TIN MAUNG NAING</option>
-          <option>HTUT KO KO</option>
-          <option>MIN MIN OO</option>
-          <option>PHYO THURA AUNG</option>
-          <option>KYAW MYO HTWE</option>
-          <option>WIN HTEIN</option>
-          <option>HTOO KO KO</option>
-          <option>NYAN LIN AUNG</option>
-          <option>NYEIN AYE</option>
-          <option>SAW THET HTET AUNG</option>
-          <option>THU HTET AUNG</option>
-          <option>THIHA KO KO</option>
-        </select>
-      </div>
+    <div class="card-title">BASIC INFO</div>
+
+    <div class="field">
+      <label>DATE</label>
+      <input type="date" id="f-date">
     </div>
-    <div class="row2">
-      <div class="field">
-        <label>Flight No</label>
-        <input type="text" id="f-flt" placeholder="e.g. 231" inputmode="numeric">
-      </div>
-      <div class="field">
-        <label>AC Reg</label>
-        <div class="ac-wrap">
-          <svg class="ac-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" id="f-ac-txt" class="ac-inp" placeholder="Search reg..." autocomplete="off">
-          <input type="hidden" id="f-ac-val">
-          <div class="ac-dd" id="ac-dd"></div>
-        </div>
+
+    <div class="field">
+      <label>REPORTER NAME</label>
+      <select id="f-reporter">
+        <option value="">SELECT...</option>
+        <option>YE WIN AUNG</option>
+        <option>TIN MAUNG NAING</option>
+        <option>HTUT KO KO</option>
+        <option>MIN MIN OO</option>
+        <option>PHYO THURA AUNG</option>
+        <option>KYAW MYO HTWE</option>
+        <option>WIN HTEIN</option>
+        <option>HTOO KO KO</option>
+        <option>NYAN LIN AUNG</option>
+        <option>NYEIN AYE</option>
+        <option>SAW THET HTET AUNG</option>
+        <option>THU HTET AUNG</option>
+        <option>THIHA KO KO</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label>FLIGHT NO</label>
+      <input type="text" id="f-flt" placeholder="E.G. 231" inputmode="numeric">
+    </div>
+
+    <div class="field">
+      <label>AC REG</label>
+      <div class="ac-wrap">
+        <svg class="ac-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" id="f-ac-txt" class="ac-inp" placeholder="SEARCH REG..." autocomplete="off">
+        <input type="hidden" id="f-ac-val">
+        <div class="ac-dd" id="ac-dd"></div>
       </div>
     </div>
   </div>
 
+  <!-- TIMES -->
   <div class="card">
-    <div class="card-title">Times (24-hr)</div>
-    <div class="row3">
-      <div class="field"><label>STD</label><input type="time" id="f-std"></div>
-      <div class="field"><label>Start loading</label><input type="time" id="f-start"></div>
-      <div class="field"><label>Complete</label><input type="time" id="f-comp"></div>
+    <div class="card-title">TIMES (24-HR)</div>
+
+    <div class="field">
+      <label>STD</label>
+      <input type="time" id="f-std">
     </div>
-    <div class="row3">
-      <div class="field"><label>Crew arrival</label><input type="time" id="f-carr"></div>
-      <div class="field"><label>Crew check</label><input type="time" id="f-cchk"></div>
+
+    <div class="row2">
       <div class="field">
-        <label>Comment</label>
-        <select id="f-comment">
-          <option value="">Select...</option>
-          <option value="ON TIME">On time</option>
-          <option value="QTR">QTR</option>
-          <option value="AIC DELAY">AIC delay</option>
-          <option value="CREW DELAY">Crew delay</option>
-          <option value="WX DELAY">WX delay</option>
-          <option value="OTHER">Other</option>
-        </select>
+        <label>START LOADING</label>
+        <input type="time" id="f-start">
+      </div>
+      <div class="field">
+        <label>COMPLETE</label>
+        <input type="time" id="f-comp">
+      </div>
+    </div>
+
+    <div class="row2">
+      <div class="field">
+        <label>CREW ARRIVAL</label>
+        <input type="time" id="f-carr">
+      </div>
+      <div class="field">
+        <label>CREW CHECK</label>
+        <input type="time" id="f-cchk">
       </div>
     </div>
   </div>
 
+  <!-- COMMENT -->
   <div class="card">
-    <div class="card-title">Required list</div>
+    <div class="card-title">COMMENT</div>
+    <div class="field">
+      <label>STATUS</label>
+      <select id="f-comment">
+        <option value="">SELECT...</option>
+        <option value="ON TIME">ON TIME</option>
+        <option value="QTR">QTR</option>
+        <option value="FLIGHT DELAY">FLIGHT DELAY</option>
+        <option value="IFS DELAY">IFS DELAY</option>
+        <option value="AIC DELAY">AIC DELAY</option>
+        <option value="GOD DELAY">GOD DELAY</option>
+        <option value="SECURITY DELAY">SECURITY DELAY</option>
+        <option value="CREW DELAY">CREW DELAY</option>
+        <option value="LIFE DELAY">LIFE DELAY</option>
+        <option value="IFCS DELAY">IFCS DELAY</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- REQUIRED LIST -->
+  <div class="card">
+    <div class="card-title">REQUIRED LIST</div>
     <div class="req-list" id="req-list"></div>
   </div>
 
+  <!-- REMARK -->
   <div class="card">
-    <div class="card-title">Remark</div>
-    <textarea id="f-remark" rows="3" placeholder="Any remarks..."></textarea>
+    <div class="card-title">REMARK</div>
+    <div class="field">
+      <textarea id="f-remark" rows="3" placeholder="Any remarks..."></textarea>
+    </div>
   </div>
 
 </div>
 <div class="sub-wrap">
   <button class="sub-btn" onclick="saveReport()">
-    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
-    Save & Sync
+    <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+    SAVE & SYNC
   </button>
 </div>
 </div>
@@ -220,12 +311,12 @@ textarea{resize:none;line-height:1.5;}
 <div id="page-rec" class="page">
 <div class="wrap" style="padding-bottom:80px;">
   <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:4px;">
-    <div class="card-title" style="font-size:12px;">Saved records</div>
+    <div class="card-title" style="font-size:11px;">SAVED RECORDS</div>
     <div style="display:flex;align-items:center;gap:8px;">
-      <div id="pend-lbl" style="font-size:11px;color:var(--muted);"></div>
+      <div id="pend-lbl" style="font-size:11px;color:var(--muted);font-weight:600;"></div>
       <button class="sync-btn" id="sync-btn" onclick="syncAll()">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-        Sync all
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        SYNC ALL
       </button>
     </div>
   </div>
@@ -237,11 +328,11 @@ textarea{resize:none;line-height:1.5;}
 <div class="bnav">
   <button class="nbtn act" id="nb-new" onclick="showPage('new')">
     <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
-    New report
+    NEW
   </button>
   <button class="nbtn" id="nb-rec" onclick="showPage('rec')">
     <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
-    Records
+    RECORDS
     <div class="nbadge" id="nb-badge" style="display:none;">0</div>
   </button>
 </div>
@@ -249,24 +340,38 @@ textarea{resize:none;line-height:1.5;}
 <div class="toast" id="toast"></div>
 
 <script>
-const SHEET_URL = 'https://script.google.com/macros/s/AKfycbzOQ3XZrlYkFW6viwVt2o_ncEra_7RDHZRs5Rj0FZACAJ9qOf9oaORe_cdztQYvhO3s/exec';
+const SHEET_URL='https://script.google.com/macros/s/AKfycbzOQ3XZrlYkFW6viwVt2o_ncEra_7RDHZRs5Rj0FZACAJ9qOf9oaORe_cdztQYvhO3s/exec';
 
 const AC_LIST=[
-  {reg:'ALY',type:'A320'},{reg:'ALZ',type:'A320'},{reg:'ALK',type:'A320'},
-  {reg:'ALT',type:'A320'},{reg:'ALJ',type:'A320'},{reg:'ALN',type:'A320'},
-  {reg:'AGR',type:'ATR72'},{reg:'AGV',type:'ATR72'},{reg:'ALP',type:'ATR72'},
-  {reg:'AMU',type:'ATR72'},{reg:'AMA',type:'ATR72'},{reg:'AMF',type:'ATR72'},
-  {reg:'AJW',type:'ATR72'},{reg:'PK-MYC',type:'B737'},{reg:'RP-C9866',type:'B737'}
+  'ALY','ALZ','ALK','ALT','ALJ','ALN',
+  'AGR','AGV','ALP','AMU','AMA','AMF','AJW',
+  'PK-MYC','RP-C9866'
 ];
-const REQ_ITEMS=['Bar cart','Duty free cart','Standby meal','Linen','Basket','Retort meal'];
+
+const REQ_ITEMS=['BAR CART','DUTY FREE CART','STANDBY MEAL','LINEN','BASKET','RETORT MEAL'];
 const reqSt={};
 REQ_ITEMS.forEach(i=>reqSt[i]=false);
 
+// THEME
+function toggleTheme(){
+  const dark=document.body.classList.toggle('dark');
+  localStorage.setItem('ifs_theme',dark?'dark':'light');
+  document.getElementById('theme-btn').textContent=dark?'☀️ LIGHT':'🌙 DARK';
+  document.querySelector('meta[name=theme-color]').content=dark?'#0F1923':'#1F3864';
+}
+function loadTheme(){
+  if(localStorage.getItem('ifs_theme')==='dark'){
+    document.body.classList.add('dark');
+    document.getElementById('theme-btn').textContent='☀️ LIGHT';
+    document.querySelector('meta[name=theme-color]').content='#0F1923';
+  }
+}
+
 // INIT
 window.addEventListener('DOMContentLoaded',()=>{
+  loadTheme();
   const t=new Date();
-  const d=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
-  document.getElementById('f-date').value=d;
+  document.getElementById('f-date').value=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
   buildReq();
   setupAC();
   checkNet();
@@ -275,37 +380,37 @@ window.addEventListener('DOMContentLoaded',()=>{
   window.addEventListener('offline',checkNet);
 });
 
+// NETWORK — only show real status
 function checkNet(){
   const on=navigator.onLine;
   const el=document.getElementById('netPill');
   const bn=document.getElementById('banner');
   if(on){
     el.className='pill pill-online';
-    el.innerHTML=`<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M5 12.55a11 11 0 0 1 14.08 0"/><path d="M1.42 9a16 16 0 0 1 21.16 0"/><path d="M8.53 16.11a6 6 0 0 1 6.95 0"/><line x1="12" y1="20" x2="12.01" y2="20"/></svg> Online`;
+    el.innerHTML=`<svg width="8" height="8" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="currentColor"/></svg> ONLINE`;
     bn.classList.add('show');
     setTimeout(()=>bn.classList.remove('show'),3000);
   } else {
     el.className='pill pill-offline';
-    el.innerHTML=`<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="1" y1="1" x2="23" y2="23"/><path d="M16.72 11.06A10.94 10.94 0 0 1 19 12.55M5 12.55a10.94 10.94 0 0 1 5.17-2.39M10.71 5.05A16 16 0 0 1 22.56 9M1.42 9a15.91 15.91 0 0 1 4.7-2.88M8.53 16.11a6 6 0 0 1 6.95 0M12 20h.01"/></svg> Offline`;
+    el.innerHTML=`<svg width="8" height="8" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="currentColor"/></svg> OFFLINE`;
   }
 }
 
-// AC SEARCH
+// AC SEARCH — no type badge
 function setupAC(){
   const inp=document.getElementById('f-ac-txt');
-  const dd=document.getElementById('ac-dd');
   inp.addEventListener('focus',()=>renderAC(inp.value));
   inp.addEventListener('input',()=>renderAC(inp.value));
-  document.addEventListener('click',e=>{if(!e.target.closest('.ac-wrap'))dd.classList.remove('open');});
+  document.addEventListener('click',e=>{if(!e.target.closest('.ac-wrap'))document.getElementById('ac-dd').classList.remove('open');});
 }
 function renderAC(q){
   const dd=document.getElementById('ac-dd');
   const qU=q.toUpperCase().replace(/\s/g,'');
-  const list=qU?AC_LIST.filter(a=>a.reg.replace(/\s/g,'').includes(qU)||a.type.toUpperCase().includes(qU)):AC_LIST;
-  dd.innerHTML=list.map(a=>`<div class="ac-opt" onclick="selAC('${a.reg}','${a.type}')">${a.reg}<span class="ac-badge">${a.type}</span></div>`).join('');
+  const list=qU?AC_LIST.filter(r=>r.replace(/\s/g,'').includes(qU)):AC_LIST;
+  dd.innerHTML=list.map(r=>`<div class="ac-opt" onclick="selAC('${r}')">${r}</div>`).join('');
   dd.classList.toggle('open',list.length>0);
 }
-function selAC(reg,type){
+function selAC(reg){
   document.getElementById('f-ac-txt').value=reg;
   document.getElementById('f-ac-val').value=reg;
   document.getElementById('ac-dd').classList.remove('open');
@@ -314,17 +419,17 @@ function selAC(reg,type){
 // REQUIRED LIST
 function buildReq(){
   document.getElementById('req-list').innerHTML=REQ_ITEMS.map(it=>`
-    <div class="req-item" onclick="togReq('${it}')">
+    <div class="req-item" id="ri-${it.replace(/\s/g,'_')}" onclick="togReq('${it}')">
       <div class="req-chk" id="chk-${it.replace(/\s/g,'_')}">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg>
       </div>
       <span class="req-label">${it}</span>
     </div>`).join('');
 }
 function togReq(it){
   reqSt[it]=!reqSt[it];
-  const el=document.getElementById('chk-'+it.replace(/\s/g,'_'));
-  el.classList.toggle('chkd',reqSt[it]);
+  document.getElementById('chk-'+it.replace(/\s/g,'_')).classList.toggle('chkd',reqSt[it]);
+  document.getElementById('ri-'+it.replace(/\s/g,'_')).classList.toggle('checked',reqSt[it]);
 }
 
 // SAVE
@@ -336,7 +441,7 @@ function saveReport(){
   const std=document.getElementById('f-std').value;
   const start=document.getElementById('f-start').value;
   const comp=document.getElementById('f-comp').value;
-  if(!date||!rep||!flt||!ac||!std||!start||!comp){showToast('⚠ Please fill in required fields');return;}
+  if(!date||!rep||!flt||!ac||!std||!start||!comp){showToast('⚠ FILL IN REQUIRED FIELDS');return;}
   const rec={
     id:Date.now(),date,reporter:rep,flightno:flt,acreg:ac,
     std,start,complete:comp,
@@ -350,54 +455,36 @@ function saveReport(){
   const all=getRecs();
   all.unshift(rec);
   localStorage.setItem('ifs_reports',JSON.stringify(all));
-  showToast('✓ Saved locally');
+  showToast('✓ SAVED');
   resetForm();
   updateBadge();
-  // Try sync immediately if online
-  if(navigator.onLine) syncRecord(rec);
+  if(navigator.onLine)syncRecord(rec);
 }
 
-// SYNC SINGLE RECORD
+// SYNC
 async function syncRecord(rec){
   try{
-    await fetch(SHEET_URL,{
-      method:'POST',
-      mode:'no-cors',
-      headers:{'Content-Type':'text/plain'},
-      body:JSON.stringify(rec)
-    });
+    await fetch(SHEET_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(rec)});
     markSynced(rec.id);
     return true;
-  }catch(e){
-    return false;
-  }
+  }catch(e){return false;}
 }
-
-// SYNC ALL PENDING
 async function syncAll(){
-  if(!navigator.onLine){showToast('⚠ No internet connection');return;}
+  if(!navigator.onLine){showToast('⚠ NO CONNECTION');return;}
   const btn=document.getElementById('sync-btn');
   btn.disabled=true;
-  btn.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke-width="2" style="animation:spin 1s linear infinite"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Syncing...`;
+  btn.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" style="animation:spin 1s linear infinite"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> SYNCING...`;
   const pending=getRecs().filter(r=>!r.synced);
   let ok=0;
-  for(const r of pending){
-    const res=await syncRecord(r);
-    if(res)ok++;
-  }
+  for(const r of pending){if(await syncRecord(r))ok++;}
   btn.disabled=false;
-  btn.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> Sync all`;
-  showToast(ok>0?`✓ Synced ${ok} record${ok>1?'s':''}`:'Nothing new to sync');
-  renderRecs();
-  updateBadge();
+  btn.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> SYNC ALL`;
+  showToast(ok>0?`✓ SYNCED ${ok} RECORD${ok>1?'S':''}`:'NOTHING TO SYNC');
+  renderRecs();updateBadge();
 }
-
-// AUTO SYNC ON RECONNECT
 function autoSync(){
-  const pending=getRecs().filter(r=>!r.synced);
-  if(pending.length>0) syncAll();
+  if(getRecs().filter(r=>!r.synced).length>0)syncAll();
 }
-
 function markSynced(id){
   const all=getRecs();
   const idx=all.findIndex(r=>r.id===id);
@@ -411,18 +498,18 @@ function renderRecs(){
   const list=document.getElementById('rec-list');
   const recs=getRecs();
   const pend=recs.filter(r=>!r.synced).length;
-  document.getElementById('pend-lbl').textContent=pend>0?`${pend} pending`:'All synced ✓';
+  document.getElementById('pend-lbl').textContent=pend>0?`${pend} PENDING`:'ALL SYNCED ✓';
   if(!recs.length){
-    list.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>No reports saved yet</p></div>';
+    list.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>NO REPORTS SAVED YET</p></div>';
     return;
   }
   list.innerHTML=recs.map(r=>`
-    <div class="rec-card" style="margin-bottom:8px;">
+    <div class="rec-card">
       <div>
-        <div class="rec-title">Flight ${r.flightno} · ${r.acreg}</div>
+        <div class="rec-title">FLIGHT ${r.flightno} · ${r.acreg}</div>
         <div class="rec-sub">${r.date} · ${r.reporter} · ${r.comment||'—'}</div>
       </div>
-      <span class="rbadge ${r.synced?'rbadge-s':'rbadge-p'}">${r.synced?'Synced':'Pending'}</span>
+      <span class="rbadge ${r.synced?'rbadge-s':'rbadge-p'}">${r.synced?'SYNCED':'PENDING'}</span>
     </div>`).join('');
 }
 function updateBadge(){
@@ -434,15 +521,16 @@ function updateBadge(){
 
 // RESET
 function resetForm(){
-  ['f-flt','f-ac-txt','f-ac-val','f-std','f-start','f-comp','f-carr','f-cchk','f-remark'].forEach(id=>{document.getElementById(id).value='';});
+  ['f-flt','f-ac-txt','f-ac-val','f-std','f-start','f-comp','f-carr','f-cchk','f-remark'].forEach(id=>document.getElementById(id).value='');
   document.getElementById('f-comment').value='';
   document.getElementById('f-reporter').value='';
   REQ_ITEMS.forEach(i=>{
     reqSt[i]=false;
-    const el=document.getElementById('chk-'+i.replace(/\s/g,'_'));
-    if(el)el.classList.remove('chkd');
+    const c=document.getElementById('chk-'+i.replace(/\s/g,'_'));
+    const ri=document.getElementById('ri-'+i.replace(/\s/g,'_'));
+    if(c)c.classList.remove('chkd');
+    if(ri)ri.classList.remove('checked');
   });
-  // Reset date to today
   const t=new Date();
   document.getElementById('f-date').value=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
 }
@@ -463,15 +551,7 @@ function showToast(msg){
   setTimeout(()=>t.classList.remove('show'),2500);
 }
 
-// SPIN ANIMATION
-const style=document.createElement('style');
-style.textContent='@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}';
-document.head.appendChild(style);
-
-// SERVICE WORKER
-if("serviceWorker" in navigator){
-  navigator.serviceWorker.register("sw.js").catch(()=>{});
-}
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
 </script>
 </body>
 </html>
