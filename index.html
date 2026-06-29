@@ -375,6 +375,21 @@ function loadTheme(){
 }
 
 // INIT
+const APP_VERSION='1.0.0';
+
+// Auto-update check: compare version with Github raw file
+async function checkForUpdate(){
+  try{
+    const res=await fetch('https://raw.githubusercontent.com/johnmin1992-sudo/ifs-flight-report/main/index.html?t='+Date.now());
+    const text=await res.text();
+    const match=text.match(/APP_VERSION='([^']+)'/);
+    if(match && match[1] !== APP_VERSION){
+      showToast('🔄 UPDATE AVAILABLE — RELOADING...');
+      setTimeout(()=>location.reload(true),1500);
+    }
+  }catch(e){}
+}
+
 window.addEventListener('DOMContentLoaded',()=>{
   loadTheme();
   const t=new Date();
@@ -387,6 +402,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   setupAC();
   loadStaff();
   checkNet();
+  checkForUpdate();
   updateHeaderDate();
   setInterval(updateHeaderDate, 1000);
 
