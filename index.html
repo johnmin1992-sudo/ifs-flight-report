@@ -199,20 +199,7 @@ body.dark .toast{background:var(--gold);color:#1A1A2E;}
     <div class="field">
       <label>REPORTER NAME</label>
       <select id="f-reporter">
-        <option value="">SELECT...</option>
-        <option>YE WIN AUNG</option>
-        <option>TIN MAUNG NAING</option>
-        <option>HTUT KO KO</option>
-        <option>MIN MIN OO</option>
-        <option>PHYO THURA AUNG</option>
-        <option>KYAW MYO HTWE</option>
-        <option>WIN HTEIN</option>
-        <option>HTOO KO KO</option>
-        <option>NYAN LIN AUNG</option>
-        <option>NYEIN AYE</option>
-        <option>SAW THET HTET AUNG</option>
-        <option>THU HTET AUNG</option>
-        <option>THIHA KO KO</option>
+        <option value="">LOADING...</option>
       </select>
     </div>
 
@@ -379,6 +366,7 @@ window.addEventListener('DOMContentLoaded',()=>{
   el.innerHTML=`<svg width="8" height="8" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="currentColor"/></svg> CHECKING...`;
   buildReq();
   setupAC();
+  loadStaff();
   checkNet();
   updateBadge();
   window.addEventListener('online',()=>checkNet());
@@ -454,6 +442,32 @@ function togReq(it){
   document.getElementById('ri-'+it.replace(/\s/g,'_')).classList.toggle('checked',reqSt[it]);
 }
 
+// STAFF LIST — load from Sheet, fallback to hardcoded if offline
+const STAFF_FALLBACK=['YE WIN AUNG','TIN MAUNG NAING','HTUT KO KO','MIN MIN OO','PHYO THURA AUNG','KYAW MYO HTWE','WIN HTEIN','HTOO KO KO','NYAN LIN AUNG','NYEIN AYE','SAW THET HTET AUNG','THU HTET AUNG','THIHA KO KO'];
+async function loadStaff(){
+  const sel=document.getElementById('f-reporter');
+  function fillStaff(names){
+    sel.innerHTML='<option value="">SELECT...</option>'+names.map(n=>`<option>${n}</option>`).join('');
+  }
+  // Try cache first
+  const cached=localStorage.getItem('ifs_staff');
+  if(cached){fillStaff(JSON.parse(cached));}
+  // Then try live
+  if(!navigator.onLine){if(!cached)fillStaff(STAFF_FALLBACK);return;}
+  try{
+    const res=await fetch(SHEET_URL+'?action=getStaff');
+    const data=await res.json();
+    if(data.result==='ok'&&data.staff&&data.staff.length>0){
+      fillStaff(data.staff);
+      localStorage.setItem('ifs_staff',JSON.stringify(data.staff));
+    } else {
+      if(!cached)fillStaff(STAFF_FALLBACK);
+    }
+  }catch(e){
+    if(!cached)fillStaff(STAFF_FALLBACK);
+  }
+}
+
 // SAVE — duplicate guard on Date + FlightNo + AcReg
 let _saving=false;
 function saveReport(){
@@ -484,7 +498,7 @@ function saveReport(){
   setTimeout(()=>{_saving=false;if(btn){btn.disabled=false;btn.style.opacity='';}},3000);
 
   const rec={
-    id:Date.now(),dupKey,date,reporter:rep,flightno:flt,acreg:ac,
+    id:Date.now(),dupKey,token:'MAI-IFS-2026',date,reporter:rep,flightno:flt,acreg:ac,
     std,start,complete:comp,
     crewArr:document.getElementById('f-carr').value,
     crewChk:document.getElementById('f-cchk').value,
