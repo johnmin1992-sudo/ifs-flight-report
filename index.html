@@ -43,10 +43,10 @@ body.dark{
 .theme-btn:active{background:rgba(255,255,255,.32);}
 
 /* DATE BAR */
-.date-bar{flex:1;margin-left:8px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:5px 16px;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px;min-height:34px;letter-spacing:.03em;}
-.date-bar-day{font-weight:800;opacity:.95;}
+.date-bar{flex:1;margin-left:8px;background:rgba(255,255,255,.18);border:1px solid rgba(255,255,255,.25);border-radius:20px;padding:5px 12px;color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:5px;min-height:34px;letter-spacing:.03em;white-space:nowrap;}
+.date-bar-day{font-weight:700;opacity:1;}
 .date-bar-sep{opacity:.45;font-weight:400;}
-.date-bar-date{opacity:.80;font-weight:600;}
+.date-bar-date{font-weight:700;opacity:1;}
 
 /* BANNER */
 .banner{background:var(--blue-bg);color:var(--blue);font-size:12px;padding:8px 16px;display:none;align-items:center;gap:8px;border-bottom:1px solid #B5D4F4;}
@@ -662,9 +662,10 @@ function updateHeaderDate(){
   const yyyy=now.getFullYear();
   const hh=String(now.getHours()).padStart(2,'0');
   const mm=String(now.getMinutes()).padStart(2,'0');
+  const yy=String(yyyy).slice(-2);
   document.getElementById('hdr-day').textContent=day;
-  document.getElementById('hdr-date').textContent=dd+'-'+mon+'-'+yyyy;
-  document.getElementById('hdr-time').textContent=hh+':'+mm+' MMT';
+  document.getElementById('hdr-date').textContent=dd+'-'+mon+'-'+yy;
+  document.getElementById('hdr-time').textContent=hh+':'+mm;
 }
 
 function showPage(name){
