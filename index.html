@@ -163,15 +163,18 @@ body.dark .toast{background:var(--gold);color:#1A1A2E;}
 
 <div class="hdr">
   <div class="hdr-row1">
-    <div class="hdr-title">IFS FLIGHT REPORT</div>
+    <div>
+      <div class="hdr-title">IFS FLIGHT REPORT</div>
+      <div class="hdr-sub">MYANMAR AIRWAYS INTERNATIONAL</div>
+    </div>
     <div id="netPill" class="pill pill-offline">
       <svg width="8" height="8" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="currentColor"/></svg>
       OFFLINE
     </div>
   </div>
   <div class="hdr-row2">
-    <div class="hdr-sub">MYANMAR AIRWAYS INTERNATIONAL</div>
     <button class="theme-btn" onclick="toggleTheme()" id="theme-btn">🌙 DARK MODE</button>
+    <div id="net-status" style="font-size:10px;opacity:.6;font-weight:600;"></div>
   </div>
 </div>
 
@@ -375,23 +378,35 @@ window.addEventListener('DOMContentLoaded',()=>{
   checkNet();
   updateBadge();
   window.addEventListener('online',()=>{checkNet();autoSync();});
-  window.addEventListener('offline',checkNet);
+  window.addEventListener('offline',()=>checkNet());
+  // Recheck every 30s
+  setInterval(checkNet, 30000);
 });
 
-// NETWORK — only show real status
-function checkNet(){
-  const on=navigator.onLine;
+// REAL NETWORK CHECK
+async function checkNet(){
   const el=document.getElementById('netPill');
   const bn=document.getElementById('banner');
-  if(on){
+  // First check browser flag
+  if(!navigator.onLine){
+    setOffline(el);
+    return;
+  }
+  // Real ping to verify actual internet
+  try{
+    await fetch('https://www.google.com/favicon.ico',{mode:'no-cors',cache:'no-store'});
     el.className='pill pill-online';
     el.innerHTML=`<svg width="8" height="8" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="currentColor"/></svg> ONLINE`;
     bn.classList.add('show');
     setTimeout(()=>bn.classList.remove('show'),3000);
-  } else {
-    el.className='pill pill-offline';
-    el.innerHTML=`<svg width="8" height="8" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="currentColor"/></svg> OFFLINE`;
+  }catch(e){
+    setOffline(el);
   }
+}
+function setOffline(el){
+  el.className='pill pill-offline';
+  el.innerHTML=`<svg width="8" height="8" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="currentColor"/></svg> OFFLINE`;
+  document.getElementById('banner').classList.remove('show');
 }
 
 // AC SEARCH — no type badge
