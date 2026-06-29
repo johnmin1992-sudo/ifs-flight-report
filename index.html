@@ -295,7 +295,7 @@ body.dark .toast{background:var(--gold);color:#1A1A2E;}
   <div class="card">
     <div class="card-title">REMARK</div>
     <div class="field">
-      <textarea id="f-remark" rows="3" placeholder="Any remarks..."></textarea>
+      <textarea id="f-remark" rows="3" placeholder="ANY REMARKS..." oninput="this.value=this.value.toUpperCase()" style="text-transform:uppercase;"></textarea>
     </div>
   </div>
 
@@ -373,13 +373,16 @@ window.addEventListener('DOMContentLoaded',()=>{
   loadTheme();
   const t=new Date();
   document.getElementById('f-date').value=`${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
+  // Start as offline, let checkNet verify
+  const el=document.getElementById('netPill');
+  el.className='pill pill-offline';
+  el.innerHTML=`<svg width="8" height="8" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="currentColor"/></svg> CHECKING...`;
   buildReq();
   setupAC();
   checkNet();
   updateBadge();
-  window.addEventListener('online',()=>{checkNet();autoSync();});
-  window.addEventListener('offline',()=>checkNet());
-  // Recheck every 30s
+  window.addEventListener('online',()=>checkNet());
+  window.addEventListener('offline',()=>{const e=document.getElementById('netPill');setOffline(e,document.getElementById('banner'));});
   setInterval(checkNet, 30000);
 });
 
@@ -387,26 +390,32 @@ window.addEventListener('DOMContentLoaded',()=>{
 async function checkNet(){
   const el=document.getElementById('netPill');
   const bn=document.getElementById('banner');
-  // First check browser flag
+  // Always set offline first, then verify
   if(!navigator.onLine){
-    setOffline(el);
+    setOffline(el,bn);
     return;
   }
-  // Real ping to verify actual internet
   try{
-    await fetch('https://www.google.com/favicon.ico',{mode:'no-cors',cache:'no-store'});
+    const ctrl=new AbortController();
+    const tid=setTimeout(()=>ctrl.abort(),3000);
+    await fetch('https://www.google.com/favicon.ico',{mode:'no-cors',cache:'no-store',signal:ctrl.signal});
+    clearTimeout(tid);
+    const wasOffline=el.classList.contains('pill-offline');
     el.className='pill pill-online';
     el.innerHTML=`<svg width="8" height="8" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="currentColor"/></svg> ONLINE`;
-    bn.classList.add('show');
-    setTimeout(()=>bn.classList.remove('show'),3000);
+    if(wasOffline){
+      bn.classList.add('show');
+      setTimeout(()=>bn.classList.remove('show'),3000);
+      autoSync();
+    }
   }catch(e){
-    setOffline(el);
+    setOffline(el,bn);
   }
 }
-function setOffline(el){
+function setOffline(el,bn){
   el.className='pill pill-offline';
   el.innerHTML=`<svg width="8" height="8" viewBox="0 0 10 10"><circle cx="5" cy="5" r="5" fill="currentColor"/></svg> OFFLINE`;
-  document.getElementById('banner').classList.remove('show');
+  if(bn)bn.classList.remove('show');
 }
 
 // AC SEARCH — no type badge
