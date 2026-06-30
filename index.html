@@ -139,6 +139,14 @@ body.dark .sub-btn:active{background:#D4920A;}
 .del-btn{background:none;border:none;cursor:pointer;padding:6px;border-radius:6px;color:var(--light);display:flex;align-items:center;flex-shrink:0;}
 .del-btn:hover{background:var(--red-bg);color:var(--red);}
 .del-btn svg{width:16px;height:16px;stroke:currentColor;}
+.edit-btn{background:none;border:none;cursor:pointer;padding:6px;border-radius:6px;color:var(--light);display:flex;align-items:center;flex-shrink:0;}
+.edit-btn:hover{background:rgba(31,56,100,.12);color:#1F3864;}
+.edit-btn svg{width:16px;height:16px;stroke:currentColor;}
+.sync-now-btn{background:none;border:none;cursor:pointer;padding:6px;border-radius:6px;color:var(--light);display:flex;align-items:center;flex-shrink:0;}
+.sync-now-btn:hover{background:var(--green-bg);color:var(--green);}
+.sync-now-btn svg{width:16px;height:16px;stroke:currentColor;}
+.edit-banner{display:none;align-items:center;justify-content:space-between;gap:10px;background:var(--amber-bg);color:var(--amber);border-radius:10px;padding:10px 14px;font-size:12px;font-weight:700;margin-bottom:4px;}
+.edit-banner button{background:none;border:1.5px solid currentColor;color:inherit;border-radius:8px;padding:5px 10px;font-size:11px;font-weight:700;cursor:pointer;}
 
 /* SYNC BTN */
 .sync-btn{background:var(--blue-bg);color:var(--blue);border:1.5px solid #B5D4F4;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:inherit;}
@@ -205,6 +213,11 @@ body.dark .toast{background:var(--gold);color:#1A1A2E;}
 <!-- NEW REPORT PAGE -->
 <div id="page-new" class="page act">
 <div class="wrap">
+
+  <div class="edit-banner" id="edit-banner">
+    <span>✏️ EDITING RECORD</span>
+    <button onclick="cancelEdit()">CANCEL</button>
+  </div>
 
   <!-- BASIC INFO -->
   <div class="card">
@@ -375,7 +388,7 @@ function loadTheme(){
 }
 
 // INIT
-const APP_VERSION='1.0.0';
+const APP_VERSION='1.1.0';
 
 // Auto-update check: compare version with Github raw file
 async function checkForUpdate(){
@@ -508,6 +521,7 @@ async function loadStaff(){
 
 // SAVE — duplicate guard on Date + FlightNo + AcReg
 let _saving=false;
+let _editingId=null; // null = new entry, else = editing existing record id
 function saveReport(){
   if(_saving){showToast('⚠ PLEASE WAIT...');return;}
   const date=document.getElementById('f-date').value;
@@ -519,40 +533,72 @@ function saveReport(){
   const comp=document.getElementById('f-comp').value;
   if(!date||!rep||!flt||!ac||!std||!start||!comp){showToast('⚠ FILL IN REQUIRED FIELDS');return;}
 
-  // Unique: same date + same flight no + same AC = same flight, block it
   const dupKey=`${date}|${flt.toUpperCase()}|${ac.toUpperCase()}`;
-  // Compare both dupKey field AND raw fields (covers old records without dupKey)
+  // Duplicate check — skip the record currently being edited
   const dup=getRecs().find(r=>
-    r.dupKey===dupKey ||
+    r.id!==_editingId &&
+    (r.dupKey===dupKey ||
     (r.date===date &&
      r.flightno.trim().toUpperCase()===flt.toUpperCase() &&
-     (r.acreg||'').trim().toUpperCase()===ac.toUpperCase())
+     (r.acreg||'').trim().toUpperCase()===ac.toUpperCase()))
   );
   if(dup){showToast('⚠ DUPLICATE: FLT '+flt+' / '+ac+' ALREADY SAVED');return;}
 
   _saving=true;
   const btn=document.querySelector('.sub-btn');
   if(btn){btn.disabled=true;btn.style.opacity='0.6';}
-  setTimeout(()=>{_saving=false;if(btn){btn.disabled=false;btn.style.opacity='';}},3000);
+  setTimeout(()=>{_saving=false;if(btn){btn.disabled=false;btn.style.opacity='';}},1500);
 
-  const rec={
-    id:Date.now(),dupKey,token:'MAI-IFS-2026',date,reporter:rep,flightno:flt,acreg:ac,
+  const all=getRecs();
+  const fields={
+    dupKey,token:'MAI-IFS-2026',date,reporter:rep,flightno:flt,acreg:ac,
     std,start,complete:comp,
     crewArr:document.getElementById('f-carr').value,
     crewChk:document.getElementById('f-cchk').value,
     comment:document.getElementById('f-comment').value,
     remark:document.getElementById('f-remark').value.trim(),
-    requiredList:REQ_ITEMS.filter(i=>reqSt[i]).join(', '),
-    synced:false,savedAt:new Date().toISOString()
+    requiredList:REQ_ITEMS.filter(i=>reqSt[i]).join(', ')
   };
-  const all=getRecs();
-  all.unshift(rec);
-  localStorage.setItem('ifs_reports',JSON.stringify(all));
-  showToast('✓ SAVED');
+
+  if(_editingId!==null){
+    // EDIT MODE — update existing pending record, reset lock timer
+    const idx=all.findIndex(r=>r.id===_editingId);
+    if(idx>-1){
+      all[idx]={...all[idx],...fields,lockAt:Date.now()+5*60*1000};
+      localStorage.setItem('ifs_reports',JSON.stringify(all));
+      showToast('✓ UPDATED');
+    }
+    _editingId=null;
+    setEditModeUI(false);
+  } else {
+    // NEW ENTRY — pending state, 5 min grace period before auto-sync
+    const rec={
+      id:Date.now(),...fields,
+      synced:false,savedAt:new Date().toISOString(),
+      lockAt:Date.now()+5*60*1000
+    };
+    all.unshift(rec);
+    localStorage.setItem('ifs_reports',JSON.stringify(all));
+    showToast('✓ SAVED — EDITABLE FOR 5 MIN');
+  }
   resetForm();
   updateBadge();
-  if(navigator.onLine)syncRecord(rec);
+  renderRecs();
 }
+
+// AUTO-LOCK & SYNC — checks every 10s for records whose 5-min grace period has expired
+async function checkAutoLock(){
+  const now=Date.now();
+  const due=getRecs().filter(r=>!r.synced && r.lockAt && r.lockAt<=now);
+  for(const r of due){
+    if(navigator.onLine){
+      await syncRecord(r);
+    }
+    // If offline, record stays locked (uneditable) but unsynced — will sync once online
+  }
+  if(due.length>0){renderRecs();updateBadge();}
+}
+setInterval(checkAutoLock,10000);
 
 // SYNC — in-progress guard prevents same record syncing twice simultaneously
 const _syncing=new Set();
@@ -589,6 +635,7 @@ async function syncAll(){
   const btn=document.getElementById('sync-btn');
   btn.disabled=true;
   btn.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" style="animation:spin 1s linear infinite"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> SYNCING...`;
+  // Manual "Sync All" is an explicit user action — syncs ALL unsynced records (pending or locked)
   const pending=getRecs().filter(r=>!r.synced);
   let ok=0;
   for(const r of pending){if(await syncRecord(r))ok++;}
@@ -597,8 +644,14 @@ async function syncAll(){
   showToast(ok>0?`✓ SYNCED ${ok} RECORD${ok>1?'S':''}`:'NOTHING TO SYNC');
   renderRecs();updateBadge();
 }
-function autoSync(){
-  if(getRecs().filter(r=>!r.synced).length>0)syncAll();
+async function autoSync(){
+  // Only sync records whose 5-min grace period has expired (locked) — never touch pending/editable ones
+  const due=getRecs().filter(r=>!r.synced && r.lockAt && r.lockAt<=Date.now());
+  if(due.length===0)return;
+  let ok=0;
+  for(const r of due){if(await syncRecord(r))ok++;}
+  if(ok>0)showToast(`✓ SYNCED ${ok} RECORD${ok>1?'S':''}`);
+  renderRecs();updateBadge();
 }
 function markSynced(id){
   const all=getRecs();
@@ -609,9 +662,15 @@ function markSynced(id){
 
 // RECORDS
 function getRecs(){try{return JSON.parse(localStorage.getItem('ifs_reports')||'[]');}catch{return[];}}
+
+function isLocked(r){
+  return r.synced || (r.lockAt && r.lockAt<=Date.now());
+}
+
 function deleteRec(id){
   const rec=getRecs().find(r=>r.id===id);
   if(!rec)return;
+  if(isLocked(rec)){showToast('⚠ LOCKED — CANNOT DELETE');return;}
   const label='FLIGHT '+rec.flightno+' / '+rec.acreg+' ('+rec.date+')';
   if(!confirm('DELETE '+label+'?\nApp record only — Sheet row must be deleted manually.'))return;
   const all=getRecs().filter(r=>r.id!==id);
@@ -619,6 +678,70 @@ function deleteRec(id){
   showToast('🗑 DELETED');
   renderRecs();
   updateBadge();
+}
+
+function editRec(id){
+  const rec=getRecs().find(r=>r.id===id);
+  if(!rec)return;
+  if(isLocked(rec)){showToast('⚠ LOCKED — CANNOT EDIT');return;}
+  _editingId=id;
+  document.getElementById('f-date').value=rec.date;
+  document.getElementById('f-reporter').value=rec.reporter;
+  document.getElementById('f-flt').value=rec.flightno;
+  document.getElementById('f-ac-txt').value=rec.acreg;
+  document.getElementById('f-ac-val').value=rec.acreg;
+  document.getElementById('f-std').value=rec.std;
+  document.getElementById('f-start').value=rec.start;
+  document.getElementById('f-comp').value=rec.complete;
+  document.getElementById('f-carr').value=rec.crewArr||'';
+  document.getElementById('f-cchk').value=rec.crewChk||'';
+  document.getElementById('f-comment').value=rec.comment||'';
+  document.getElementById('f-remark').value=rec.remark||'';
+  const checkedItems=(rec.requiredList||'').split(', ').filter(Boolean);
+  REQ_ITEMS.forEach(it=>{
+    reqSt[it]=checkedItems.includes(it);
+    const chk=document.getElementById('chk-'+it.replace(/\s/g,'_'));
+    const item=document.getElementById('ri-'+it.replace(/\s/g,'_'));
+    if(chk)chk.classList.toggle('chkd',reqSt[it]);
+    if(item)item.classList.toggle('checked',reqSt[it]);
+  });
+  setEditModeUI(true);
+  showPage('new');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function cancelEdit(){
+  _editingId=null;
+  resetForm();
+  setEditModeUI(false);
+  showToast('EDIT CANCELLED');
+}
+
+function setEditModeUI(on){
+  const btn=document.querySelector('.sub-btn');
+  const banner=document.getElementById('edit-banner');
+  if(btn)btn.innerHTML=on
+    ? '<svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M17 21v-8H7v8M7 3v5h8"/></svg> UPDATE'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg> SAVE & SYNC';
+  if(banner)banner.style.display=on?'flex':'none';
+}
+
+async function syncNow(id){
+  const rec=getRecs().find(r=>r.id===id);
+  if(!rec)return;
+  if(!navigator.onLine){showToast('⚠ NO CONNECTION');return;}
+  showToast('SYNCING...');
+  const ok=await syncRecord(rec);
+  if(ok)showToast('✓ SYNCED');
+  renderRecs();updateBadge();
+}
+
+function fmtCountdown(ms){
+  if(ms<=0)return '00:00';
+  const totalSec=Math.ceil(ms/1000);
+  const m=Math.floor(totalSec/60);
+  const s=totalSec%60;
+  return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
 }
 
 function renderRecs(){
@@ -630,20 +753,52 @@ function renderRecs(){
     list.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>NO REPORTS SAVED YET</p></div>';
     return;
   }
-  list.innerHTML=recs.map(r=>`
+  const now=Date.now();
+  list.innerHTML=recs.map(r=>{
+    const locked=isLocked(r);
+    const remain=r.lockAt?r.lockAt-now:0;
+    let statusHtml='';
+    if(r.synced){
+      statusHtml='<span class="rbadge rbadge-s">SYNCED</span>';
+    } else if(locked){
+      statusHtml='<span class="rbadge rbadge-p">⏳ LOCKED — SYNCING</span>';
+    } else {
+      statusHtml='<span class="rbadge rbadge-p" data-lockat="'+r.lockAt+'">⏱ '+fmtCountdown(remain)+'</span>';
+    }
+    const actionsHtml = locked
+      ? ''
+      : `<button class="edit-btn" onclick="editRec(${r.id})" title="EDIT">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+        </button>
+        <button class="sync-now-btn" onclick="syncNow(${r.id})" title="SYNC NOW">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+        </button>
+        <button class="del-btn" onclick="deleteRec(${r.id})" title="DELETE">
+          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
+        </button>`;
+    return `
     <div class="rec-card">
       <div style="flex:1;min-width:0;">
         <div class="rec-title">FLIGHT ${r.flightno} · ${r.acreg}</div>
         <div class="rec-sub">${r.date} · ${r.reporter} · ${r.comment||'—'}</div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
-        <span class="rbadge ${r.synced?'rbadge-s':'rbadge-p'}">${r.synced?'SYNCED':'PENDING'}</span>
-        <button class="del-btn" onclick="deleteRec(${r.id})" title="DELETE">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-        </button>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        ${statusHtml}
+        ${actionsHtml}
       </div>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
+
+// Live countdown tick — updates badge text every second without full re-render
+setInterval(()=>{
+  document.querySelectorAll('.rbadge[data-lockat]').forEach(el=>{
+    const lockAt=Number(el.getAttribute('data-lockat'));
+    const remain=lockAt-Date.now();
+    if(remain<=0){renderRecs();return;}
+    el.textContent='⏱ '+fmtCountdown(remain);
+  });
+},1000);
 function updateBadge(){
   const pend=getRecs().filter(r=>!r.synced).length;
   const b=document.getElementById('nb-badge');
