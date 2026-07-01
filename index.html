@@ -235,18 +235,19 @@ body.dark .toast{background:var(--gold);color:#1A1A2E;}
       </select>
     </div>
 
-    <div class="field">
-      <label>FLIGHT NO</label>
-      <input type="text" id="f-flt" placeholder="E.G. 231" inputmode="numeric">
-    </div>
-
-    <div class="field">
-      <label>AC REG</label>
-      <div class="ac-wrap">
-        <svg class="ac-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="text" id="f-ac-txt" class="ac-inp" placeholder="SEARCH REG..." autocomplete="off">
-        <input type="hidden" id="f-ac-val">
-        <div class="ac-dd" id="ac-dd"></div>
+    <div style="display:flex;gap:10px;">
+      <div class="field" style="flex:1;">
+        <label>FLIGHT NO</label>
+        <input type="text" id="f-flt" placeholder="E.G. 231" inputmode="numeric">
+      </div>
+      <div class="field" style="flex:1;">
+        <label>AC REG</label>
+        <div class="ac-wrap">
+          <svg class="ac-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input type="text" id="f-ac-txt" class="ac-inp" placeholder="SEARCH REG..." autocomplete="off">
+          <input type="hidden" id="f-ac-val">
+          <div class="ac-dd" id="ac-dd"></div>
+        </div>
       </div>
     </div>
   </div>
@@ -368,7 +369,7 @@ const AC_LIST=[
   'PK-MYC','RP-C9866'
 ];
 
-const REQ_ITEMS=['BAR CART','CIP ITEMS','DF CART','IFE BATTERY','RETORT / STB','WATER','LINEN / BLANKET','JUICE','BASKET','NEWSPAPER'];
+const REQ_ITEMS=['BAR CART','CIP ITEMS','DF CART','IFE BATTERY','RETORT / STB','WATER / JUICE','LINEN / BLANKET','CATERER ITEMS','BASKET','NEWSPAPER'];
 const reqSt={};
 REQ_ITEMS.forEach(i=>reqSt[i]=false);
 
@@ -388,7 +389,7 @@ function loadTheme(){
 }
 
 // INIT
-const APP_VERSION='1.1.0';
+const APP_VERSION='1.2.0';
 
 // Auto-update check: compare version with Github raw file
 async function checkForUpdate(){
