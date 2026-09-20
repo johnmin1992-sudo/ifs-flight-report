@@ -93,6 +93,10 @@ select{
   background-repeat:no-repeat;background-position:right 12px center;padding-right:32px;
 }
 textarea{resize:none;line-height:1.5;}
+/* Hide number input spinners */
+input[type=number]::-webkit-inner-spin-button,
+input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none;margin:0;}
+input[type=number]{-moz-appearance:textfield;}
 
 /* AC SEARCH */
 .ac-wrap{position:relative;}
@@ -383,7 +387,7 @@ body.dark .sch-add-btn{background:var(--gold);color:#1A1A2E;}
     <div class="sch-row">
       <div class="field">
         <label>FLIGHT NO</label>
-        <input type="text" id="s-flt" placeholder="e.g. 231" inputmode="numeric"
+        <input type="number" id="s-flt" placeholder="e.g. 231" inputmode="numeric" min="1" max="9999" step="1"
           oninput="this.value=this.value.replace(/[^0-9]/g,'')">
       </div>
       <div class="field">
