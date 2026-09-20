@@ -389,7 +389,7 @@ function loadTheme(){
 }
 
 // INIT
-const APP_VERSION='1.2.0';
+const APP_VERSION='1.2.1';
 
 // Auto-update check: compare version with Github raw file
 async function checkForUpdate(){
@@ -610,7 +610,7 @@ async function syncRecord(rec){
     const res=await fetch(SHEET_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(rec)});
     const data=await res.json();
     if(data.result==='duplicate'){
-      // Mark as synced so it stops retrying, but warn the user
+      // Already in Sheet — mark synced so app stops retrying
       markSynced(rec.id);
       showToast('⚠ FLT '+rec.flightno+'/'+rec.acreg+' ALREADY IN SHEET — DUPLICATE');
       return false;
@@ -619,15 +619,16 @@ async function syncRecord(rec){
       showToast('⚠ SYNC REJECTED — CONTACT ADMIN');
       return false;
     }
-    markSynced(rec.id);
-    return true;
-  }catch(e){
-    // CORS fallback — no-cors mode (can't read response)
-    try{
-      await fetch(SHEET_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(rec)});
+    if(data.result==='ok'){
       markSynced(rec.id);
       return true;
-    }catch(e2){return false;}
+    }
+    // Unexpected response — do NOT mark synced, leave pending for retry
+    return false;
+  }catch(e){
+    // Network error or CORS — do NOT fallback to no-cors (response unreadable → duplicates)
+    // Leave record as pending; next sync attempt will retry safely
+    return false;
   }
   finally{_syncing.delete(rec.id);}
 }
