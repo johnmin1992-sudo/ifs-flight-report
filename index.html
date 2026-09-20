@@ -383,8 +383,8 @@ body.dark .sch-add-btn{background:var(--gold);color:#1A1A2E;}
     <div class="sch-row">
       <div class="field">
         <label>FLIGHT NO</label>
-        <input type="text" id="s-flt" placeholder="e.g. 231/2" inputmode="text"
-          oninput="this.value=this.value.toUpperCase().replace(/[^0-9/]/g,'')">
+        <input type="text" id="s-flt" placeholder="e.g. 231" inputmode="numeric"
+          oninput="this.value=this.value.replace(/[^0-9]/g,'')">
       </div>
       <div class="field">
         <label>AC REG</label>
@@ -397,7 +397,7 @@ body.dark .sch-add-btn{background:var(--gold);color:#1A1A2E;}
         ADD
       </button>
     </div>
-    <div style="font-size:10px;color:var(--muted);margin-top:-4px;">Format: <b>231/2</b> &nbsp;|&nbsp; Numbers and / only</div>
+    <div style="font-size:10px;color:var(--muted);margin-top:-4px;">Format: <b>231</b> &nbsp;|&nbsp; Numbers only</div>
   </div>
 
   <div>
@@ -968,15 +968,15 @@ function saveSch(list){
 }
 
 function validateFlightNo(v){
-  // Accept: digits only OR digits/digits (e.g. 231 or 231/2)
-  return /^\d{1,4}(\/\d{1,2})?$/.test(v.trim());
+  // Accept: digits only (e.g. 231)
+  return /^\d{1,4}$/.test(v.trim());
 }
 
 function addSchFlight(){
   const flt=document.getElementById('s-flt').value.trim().toUpperCase();
   const ac=document.getElementById('s-ac').value;
   if(!flt||!ac){showToast('⚠ ENTER FLIGHT NO & AC REG');return;}
-  if(!validateFlightNo(flt)){showToast('⚠ FORMAT: 231 OR 231/2');return;}
+  if(!validateFlightNo(flt)){showToast('⚠ DIGITS ONLY, e.g. 231');return;}
   const list=getSch();
   const dup=list.find(r=>r.flt===flt&&r.ac===ac);
   if(dup){showToast("⚠ ALREADY IN TODAY'S SCHEDULE");return;}
