@@ -123,7 +123,6 @@ body.dark .req-chk.chkd svg{stroke:#1A1A2E;}
 /* SUBMIT */
 .sub-wrap{position:fixed;bottom:56px;left:0;right:0;background:var(--surface);border-top:1px solid var(--border);padding:12px 14px;z-index:100;}
 [data-page=rec] .sub-wrap{display:none;}
-[data-page=sch] .sub-wrap{display:none;}
 .sub-btn{background:var(--navy);color:#fff;border:none;border-radius:var(--radius);padding:15px;font-size:15px;font-weight:700;width:100%;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;font-family:inherit;letter-spacing:.04em;}
 .sub-btn:active{background:var(--navy2);}
 body.dark .sub-btn{background:var(--gold);color:#1A1A2E;}
@@ -179,29 +178,6 @@ body.dark .toast{background:var(--gold);color:#1A1A2E;}
 
 /* SPIN */
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
-
-/* SCHEDULE */
-.sch-row{display:grid;grid-template-columns:1fr 1fr auto;gap:8px;align-items:end;}
-.sch-item{background:var(--surface);border:1.5px solid var(--border);border-radius:10px;padding:11px 13px;display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;box-shadow:var(--card-shadow);}
-.sch-item.done{opacity:.55;border-color:var(--green);background:var(--green-bg);}
-body.dark .sch-item.done{background:#0F2010;border-color:#1A4010;}
-.sch-flt{font-size:14px;font-weight:800;letter-spacing:.04em;}
-.sch-ac{font-size:12px;color:var(--muted);font-weight:600;margin-top:2px;}
-.sch-status{font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;flex-shrink:0;}
-.sch-status-done{background:var(--green-bg);color:var(--green);}
-.sch-status-pend{background:var(--amber-bg);color:var(--amber);}
-.sch-del{background:none;border:none;cursor:pointer;padding:6px;border-radius:6px;color:var(--light);display:flex;align-items:center;flex-shrink:0;}
-.sch-del:hover{background:var(--red-bg);color:var(--red);}
-.sch-del svg{width:15px;height:15px;stroke:currentColor;}
-.sch-empty{text-align:center;padding:32px 20px;color:var(--muted);font-size:13px;}
-.pending-banner{background:var(--amber-bg);color:var(--amber);border-radius:10px;padding:11px 14px;font-size:12px;font-weight:700;display:none;align-items:center;gap:8px;margin-bottom:4px;}
-.pending-banner.show{display:flex;}
-body.dark .pending-banner{background:#2A1A00;color:#E8A040;}
-.sch-add-btn{background:var(--navy);color:#fff;border:none;border-radius:8px;padding:10px 16px;font-size:12px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;font-family:inherit;white-space:nowrap;}
-body.dark .sch-add-btn{background:var(--gold);color:#1A1A2E;}
-.sch-add-btn svg{width:14px;height:14px;stroke:currentColor;}
-.sch-nbadge{background:var(--amber);color:#fff;font-size:9px;padding:1px 6px;border-radius:10px;margin-top:-2px;}
-
 </style>
 </head>
 <body>
@@ -369,48 +345,6 @@ body.dark .sch-add-btn{background:var(--gold);color:#1A1A2E;}
 </div>
 </div>
 
-<!-- SCHEDULE PAGE -->
-<div id="page-sch" class="page">
-<div class="wrap" style="padding-bottom:80px;">
-
-  <div class="pending-banner" id="pending-banner">
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-    <span id="pending-txt">FLIGHTS NOT YET REPORTED</span>
-  </div>
-
-  <div class="card">
-    <div class="card-title">ADD FLIGHT</div>
-    <div class="sch-row">
-      <div class="field">
-        <label>FLIGHT NO</label>
-        <input type="text" id="s-flt" placeholder="e.g. 231/2" inputmode="text"
-          oninput="this.value=this.value.toUpperCase().replace(/[^0-9/]/g,'')">
-      </div>
-      <div class="field">
-        <label>AC REG</label>
-        <select id="s-ac">
-          <option value="">SELECT...</option>
-        </select>
-      </div>
-      <button class="sch-add-btn" onclick="addSchFlight()">
-        <svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
-        ADD
-      </button>
-    </div>
-    <div style="font-size:10px;color:var(--muted);margin-top:-4px;">Format: <b>231/2</b> &nbsp;|&nbsp; Numbers and / only</div>
-  </div>
-
-  <div>
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
-      <div class="card-title" style="font-size:11px;">TODAY'S SCHEDULE</div>
-      <div id="sch-date-lbl" style="font-size:11px;color:var(--muted);font-weight:600;"></div>
-    </div>
-    <div id="sch-list"></div>
-  </div>
-
-</div>
-</div>
-
 <!-- BOTTOM NAV -->
 <div class="bnav">
   <button class="nbtn act" id="nb-new" onclick="showPage('new')">
@@ -421,11 +355,6 @@ body.dark .sch-add-btn{background:var(--gold);color:#1A1A2E;}
     <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/></svg>
     RECORDS
     <div class="nbadge" id="nb-badge" style="display:none;">0</div>
-  </button>
-  <button class="nbtn" id="nb-sch" onclick="showPage('sch')">
-    <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-    SCHEDULE
-    <div class="sch-nbadge" id="sch-badge" style="display:none;">0</div>
   </button>
 </div>
 
@@ -439,12 +368,6 @@ const AC_LIST=[
   'AGR','AGV','ALP','AMU','AMA','AMF','AJW',
   'PK-MYC','RP-C9866'
 ];
-
-function buildSchAcSelect(){
-  const sel=document.getElementById('s-ac');
-  if(!sel)return;
-  sel.innerHTML='<option value="">SELECT...</option>'+AC_LIST.map(r=>`<option value="${r}">${r}</option>`).join('');
-}
 
 const REQ_ITEMS=['BAR CART','CIP ITEMS','DF CART','IFE BATTERY','RETORT / STB','WATER / JUICE','LINEN / BLANKET','CATERER ITEMS','BASKET','NEWSPAPER'];
 const reqSt={};
@@ -466,7 +389,7 @@ function loadTheme(){
 }
 
 // INIT
-const APP_VERSION='1.3.0';
+const APP_VERSION='1.2.0';
 
 // Auto-update check: compare version with Github raw file
 async function checkForUpdate(){
@@ -492,8 +415,6 @@ window.addEventListener('DOMContentLoaded',()=>{
   buildReq();
   setupAC();
   loadStaff();
-  buildSchAcSelect();
-  renderSch();
   checkNet();
   checkForUpdate();
   updateHeaderDate();
@@ -661,11 +582,8 @@ function saveReport(){
     localStorage.setItem('ifs_reports',JSON.stringify(all));
     showToast('✓ SAVED — EDITABLE FOR 5 MIN');
   }
-  // Mark matching schedule flight as done
-  matchSchFromReport(fields.date, fields.flightno, fields.acreg);
   resetForm();
   updateBadge();
-  renderSch();
   renderRecs();
 }
 
@@ -692,7 +610,7 @@ async function syncRecord(rec){
     const res=await fetch(SHEET_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(rec)});
     const data=await res.json();
     if(data.result==='duplicate'){
-      // Already in Sheet — mark synced so app stops retrying
+      // Mark as synced so it stops retrying, but warn the user
       markSynced(rec.id);
       showToast('⚠ FLT '+rec.flightno+'/'+rec.acreg+' ALREADY IN SHEET — DUPLICATE');
       return false;
@@ -701,16 +619,15 @@ async function syncRecord(rec){
       showToast('⚠ SYNC REJECTED — CONTACT ADMIN');
       return false;
     }
-    if(data.result==='ok'){
+    markSynced(rec.id);
+    return true;
+  }catch(e){
+    // CORS fallback — no-cors mode (can't read response)
+    try{
+      await fetch(SHEET_URL,{method:'POST',mode:'no-cors',headers:{'Content-Type':'text/plain'},body:JSON.stringify(rec)});
       markSynced(rec.id);
       return true;
-    }
-    // Unexpected response — do NOT mark synced, leave pending for retry
-    return false;
-  }catch(e){
-    // Network error or CORS — do NOT fallback to no-cors (response unreadable → duplicates)
-    // Leave record as pending; next sync attempt will retry safely
-    return false;
+    }catch(e2){return false;}
   }
   finally{_syncing.delete(rec.id);}
 }
@@ -931,7 +848,6 @@ function showPage(name){
   document.getElementById('nb-'+name).classList.add('act');
 
   if(name==='rec')renderRecs();
-  if(name==='sch')renderSch();
 }
 
 // TOAST
@@ -939,148 +855,6 @@ function showToast(msg){
   const t=document.getElementById('toast');
   t.textContent=msg;t.classList.add('show');
   setTimeout(()=>t.classList.remove('show'),2500);
-}
-
-// ═══════════════════════════════════════════════════════
-// SCHEDULE — Today's Flight Checklist
-// ═══════════════════════════════════════════════════════
-function todayKey(){
-  const t=new Date();
-  return `${t.getFullYear()}-${String(t.getMonth()+1).padStart(2,'0')}-${String(t.getDate()).padStart(2,'0')}`;
-}
-
-function getSch(){
-  try{
-    const all=JSON.parse(localStorage.getItem('ifs_schedule')||'{}');
-    return all[todayKey()]||[];
-  }catch{return[];}
-}
-
-function saveSch(list){
-  try{
-    const all=JSON.parse(localStorage.getItem('ifs_schedule')||'{}');
-    all[todayKey()]=list;
-    // Keep only last 7 days
-    const keys=Object.keys(all).sort();
-    if(keys.length>7)keys.slice(0,keys.length-7).forEach(k=>delete all[k]);
-    localStorage.setItem('ifs_schedule',JSON.stringify(all));
-  }catch{}
-}
-
-function validateFlightNo(v){
-  // Accept: digits only OR digits/digits (e.g. 231 or 231/2)
-  return /^\d{1,4}(\/\d{1,2})?$/.test(v.trim());
-}
-
-function addSchFlight(){
-  const flt=document.getElementById('s-flt').value.trim().toUpperCase();
-  const ac=document.getElementById('s-ac').value;
-  if(!flt||!ac){showToast('⚠ ENTER FLIGHT NO & AC REG');return;}
-  if(!validateFlightNo(flt)){showToast('⚠ FORMAT: 231 OR 231/2');return;}
-  const list=getSch();
-  const dup=list.find(r=>r.flt===flt&&r.ac===ac);
-  if(dup){showToast('⚠ ALREADY IN TODAY'S SCHEDULE');return;}
-  list.push({flt,ac,done:false,id:Date.now()});
-  saveSch(list);
-  document.getElementById('s-flt').value='';
-  document.getElementById('s-ac').value='';
-  renderSch();
-  showToast('✓ FLIGHT '+flt+' / '+ac+' ADDED');
-}
-
-function delSchFlight(id){
-  const list=getSch().filter(r=>r.id!==id);
-  saveSch(list);
-  renderSch();
-  showToast('🗑 REMOVED');
-}
-
-function renderSch(){
-  const list=getSch();
-  const today=todayKey();
-  const lbl=document.getElementById('sch-date-lbl');
-  if(lbl){
-    const d=new Date();
-    const days=['SUN','MON','TUE','WED','THU','FRI','SAT'];
-    lbl.textContent=days[d.getDay()]+' '+today;
-  }
-
-  const pending=list.filter(r=>!r.done);
-  const schBadge=document.getElementById('sch-badge');
-  if(schBadge){
-    schBadge.style.display=pending.length>0?'block':'none';
-    schBadge.textContent=pending.length;
-  }
-
-  const banner=document.getElementById('pending-banner');
-  const txt=document.getElementById('pending-txt');
-  if(banner&&txt){
-    if(pending.length>0&&list.length>0){
-      banner.classList.add('show');
-      txt.textContent=`⚠ ${pending.length} FLIGHT${pending.length>1?'S':''} NOT YET REPORTED`;
-    } else {
-      banner.classList.remove('show');
-    }
-  }
-
-  const el=document.getElementById('sch-list');
-  if(!el)return;
-  if(!list.length){
-    el.innerHTML='<div class="sch-empty">No flights scheduled for today.<br>Add flights using the form above.</div>';
-    return;
-  }
-  el.innerHTML=list.map(r=>`
-    <div class="sch-item${r.done?' done':''}">
-      <div onclick="prefillFromSch(${r.id})" style="flex:1;cursor:${r.done?'default':'pointer'}">
-        <div class="sch-flt">FLT ${r.flt}</div>
-        <div class="sch-ac">${r.ac}</div>
-      </div>
-      <span class="sch-status ${r.done?'sch-status-done':'sch-status-pend'}">
-        ${r.done?'✓ DONE':'PENDING'}
-      </span>
-      ${r.done?'':
-        `<button class="sch-del" onclick="delSchFlight(${r.id})" title="REMOVE">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/></svg>
-        </button>`
-      }
-    </div>`).join('');
-}
-
-function prefillFromSch(id){
-  const rec=getSch().find(r=>r.id===id);
-  if(!rec||rec.done)return;
-  // Pre-fill NEW REPORT form with flight+ac from schedule
-  document.getElementById('f-flt').value=rec.flt;
-  document.getElementById('f-ac-txt').value=rec.ac;
-  document.getElementById('f-ac-val').value=rec.ac;
-  showPage('new');
-  showToast('FLT '+rec.flt+' / '+rec.ac+' — FILL IN TIMES');
-  window.scrollTo({top:0,behavior:'smooth'});
-}
-
-// Match saved report → mark schedule done
-function matchSchFromReport(date,flt,ac){
-  const key=date; // date string YYYY-MM-DD
-  try{
-    const all=JSON.parse(localStorage.getItem('ifs_schedule')||'{}');
-    const list=all[key]||[];
-    let changed=false;
-    list.forEach(r=>{
-      if(r.flt.toUpperCase()===flt.toUpperCase()&&r.ac.toUpperCase()===ac.toUpperCase()){
-        r.done=true; changed=true;
-      }
-    });
-    if(changed){all[key]=list;localStorage.setItem('ifs_schedule',JSON.stringify(all));}
-  }catch{}
-  renderSch();
-  updateSchBadge();
-}
-
-function updateSchBadge(){
-  const list=getSch();
-  const pending=list.filter(r=>!r.done).length;
-  const b=document.getElementById('sch-badge');
-  if(b){b.style.display=pending>0?'block':'none';b.textContent=pending;}
 }
 
 if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js').catch(()=>{});
