@@ -141,6 +141,12 @@ body.dark .sub-btn:active{background:#D4920A;}
 .rbadge{font-size:10px;font-weight:700;padding:4px 10px;border-radius:20px;}
 .rbadge-p{background:var(--amber-bg);color:var(--amber);}
 .rbadge-s{background:var(--green-bg);color:var(--green);}
+.rbadge-f{background:var(--red-bg);color:var(--red);}
+.sync-bar{display:flex;flex-direction:column;gap:2px;border-radius:10px;padding:9px 12px;margin:8px 0;font-size:11px;}
+.sync-bar b{font-size:12px;}.sync-bar span{opacity:.85;font-weight:600;}
+.sync-bar.ok{background:var(--green-bg);color:var(--green);}
+.sync-bar.busy{background:var(--blue-bg);color:var(--blue);}
+.sync-bar.warn{background:var(--amber-bg);color:var(--amber);}
 .del-btn{background:none;border:none;cursor:pointer;padding:6px;border-radius:6px;color:var(--light);display:flex;align-items:center;flex-shrink:0;}
 .del-btn:hover{background:var(--red-bg);color:var(--red);}
 .del-btn svg{width:16px;height:16px;stroke:currentColor;}
@@ -369,6 +375,7 @@ body.dark .sch-add-btn{background:var(--gold);color:#1A1A2E;}
       </button>
     </div>
   </div>
+  <div id="sync-bar" class="sync-bar ok"></div>
   <div id="rec-list"></div>
 </div>
 </div>
@@ -470,7 +477,7 @@ function loadTheme(){
 }
 
 // INIT
-const APP_VERSION='1.3.0';
+const APP_VERSION='1.4.0';
 
 // Auto-update check: compare version with Github raw file
 async function checkForUpdate(){
@@ -507,6 +514,9 @@ window.addEventListener('DOMContentLoaded',()=>{
   window.addEventListener('online',()=>checkNet());
   window.addEventListener('offline',()=>{const e=document.getElementById('netPill');setOffline(e,document.getElementById('banner'));});
   setInterval(checkNet, 30000);
+  migrateRecords();
+  setTimeout(autoSync,3000);
+  document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'){renderRecs();autoSync();}});
 });
 
 // REAL NETWORK CHECK
@@ -657,7 +667,7 @@ function saveReport(){
   } else {
     // NEW ENTRY — pending state, 5 min grace period before auto-sync
     const rec={
-      id:Date.now(),...fields,
+      id:Date.now(),submissionId:newUUID(),...fields,
       synced:false,savedAt:new Date().toISOString(),
       lockAt:Date.now()+5*60*1000
     };
@@ -673,79 +683,171 @@ function saveReport(){
   renderRecs();
 }
 
-// AUTO-LOCK & SYNC — checks every 10s for records whose 5-min grace period has expired
-async function checkAutoLock(){
-  const now=Date.now();
-  const due=getRecs().filter(r=>!r.synced && r.lockAt && r.lockAt<=now);
-  for(const r of due){
-    if(navigator.onLine){
-      await syncRecord(r);
-    }
-    // If offline, record stays locked (uneditable) but unsynced — will sync once online
-  }
-  if(due.length>0){renderRecs();updateBadge();}
-}
-setInterval(checkAutoLock,10000);
+// ═══ SYNC ENGINE ═══
+// Fixes: (1) stuck sync — global lock has 60s TTL, every request has a timeout, lock always released in finally
+//        (2) duplicates — every report carries a client UUID (submissionId); synced IDs are remembered locally
+const SYNC_LOCK_KEY='ifs_sync_lock', SYNCED_IDS_KEY='ifs_synced_ids', LAST_SYNC_KEY='ifs_last_sync';
+const SYNC_LOCK_TTL=60000;          // lock auto-expires after 60 s
+const REQ_TIMEOUT=20000;            // per-request network timeout
+const MAX_ATTEMPTS=2;               // attempts per record per run (then backoff)
+const BACKOFF_BASE=10000, BACKOFF_MAX=10*60*1000;
+const TAB_ID=Math.random().toString(36).slice(2);
+const _syncing=new Map();           // record id -> start time (in-memory only)
+let _lockHeld=false,_lockAt=0;
 
-// SYNC — in-progress guard prevents same record syncing twice simultaneously
-const _syncing=new Set();
+function newUUID(){
+  if(window.crypto&&crypto.randomUUID)return crypto.randomUUID();
+  const b=new Uint8Array(16);
+  if(window.crypto&&crypto.getRandomValues)crypto.getRandomValues(b);else for(let i=0;i<16;i++)b[i]=Math.random()*256|0;
+  b[6]=(b[6]&15)|64;b[8]=(b[8]&63)|128;
+  const h=[...b].map(x=>x.toString(16).padStart(2,'0')).join('');
+  return h.slice(0,8)+'-'+h.slice(8,12)+'-'+h.slice(12,16)+'-'+h.slice(16,20)+'-'+h.slice(20);
+}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms));}
+async function fetchT(url,opts,ms){
+  const ctrl=new AbortController();
+  const tid=setTimeout(()=>ctrl.abort(),ms);
+  try{return await fetch(url,{...opts,signal:ctrl.signal});}
+  finally{clearTimeout(tid);}
+}
+
+// Lock (in-memory + localStorage for multi-tab). Stale locks are ignored/cleared.
+function readLock(){try{return JSON.parse(localStorage.getItem(SYNC_LOCK_KEY)||'null');}catch{return null;}}
+function writeLock(){_lockAt=Date.now();try{localStorage.setItem(SYNC_LOCK_KEY,JSON.stringify({owner:TAB_ID,t:_lockAt}));}catch{}}
+function acquireLock(){
+  const cur=readLock();
+  if(cur&&cur.owner!==TAB_ID&&Date.now()-cur.t<SYNC_LOCK_TTL)return false;   // another tab is syncing
+  if(_lockHeld&&Date.now()-_lockAt<SYNC_LOCK_TTL)return false;               // this tab is syncing
+  _lockHeld=true;writeLock();return true;                                    // free or stale -> take it
+}
+function releaseLock(){
+  _lockHeld=false;
+  try{const c=readLock();if(c&&c.owner===TAB_ID)localStorage.removeItem(SYNC_LOCK_KEY);}catch{}
+}
+
+// Local record helpers
+function saveRecs(all){localStorage.setItem('ifs_reports',JSON.stringify(all));}
+function patchRec(id,changes){
+  const all=getRecs();const i=all.findIndex(r=>r.id===id);
+  if(i>-1){all[i]={...all[i],...changes};saveRecs(all);return all[i];}
+  return null;
+}
+function getSyncedIds(){try{return JSON.parse(localStorage.getItem(SYNCED_IDS_KEY)||'[]');}catch{return[];}}
+function rememberSynced(sid){
+  if(!sid)return;
+  const ids=getSyncedIds();
+  if(!ids.includes(sid)){ids.push(sid);try{localStorage.setItem(SYNCED_IDS_KEY,JSON.stringify(ids.slice(-1000)));}catch{}}
+}
+function markSynced(id){
+  const r=patchRec(id,{synced:true,syncedAt:Date.now(),tries:0,nextTry:0,lastError:''});
+  if(r)rememberSynced(r.submissionId);
+  try{localStorage.setItem(LAST_SYNC_KEY,String(Date.now()));}catch{}
+  updateBadge();
+}
+function recordFail(id,msg,waitMs){
+  const r=getRecs().find(x=>x.id===id);if(!r)return;
+  const tries=(r.tries||0)+1;
+  const wait=waitMs||Math.min(BACKOFF_MAX,BACKOFF_BASE*Math.pow(2,tries-1));
+  patchRec(id,{tries,nextTry:Date.now()+wait,lastError:msg});
+}
+// On startup: clear stale lock, give old records a UUID + lock time so nothing is ever stuck
+function migrateRecords(){
+  const l=readLock();
+  if(!l||Date.now()-l.t>=SYNC_LOCK_TTL){try{localStorage.removeItem(SYNC_LOCK_KEY);}catch{}}
+  const all=getRecs();let ch=false;
+  all.forEach(r=>{
+    if(!r.submissionId){r.submissionId=newUUID();ch=true;}
+    if(!r.synced&&!r.lockAt){r.lockAt=Date.now()+5*60*1000;ch=true;}
+  });
+  if(ch)saveRecs(all);
+  renderRecs();updateBadge();
+}
+
+// Sync one record (re-reads it from storage, so a stale copy can never be re-sent)
 async function syncRecord(rec){
-  if(_syncing.has(rec.id))return false;
-  _syncing.add(rec.id);
+  let cur=getRecs().find(r=>r.id===rec.id);
+  if(!cur||cur.synced)return false;
+  if(!cur.submissionId)cur=patchRec(cur.id,{submissionId:newUUID()});   // saved BEFORE sending, so retries reuse it
+  if(getSyncedIds().includes(cur.submissionId)){markSynced(cur.id);return false;}
+  const st=_syncing.get(cur.id);
+  if(st&&Date.now()-st<REQ_TIMEOUT*3)return false;
+  _syncing.set(cur.id,Date.now());
+  let lastErr='';
   try{
-    const res=await fetch(SHEET_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(rec)});
-    const data=await res.json();
-    if(data.result==='duplicate'){
-      // Already in Sheet — mark synced so app stops retrying
-      markSynced(rec.id);
-      showToast('⚠ FLT '+rec.flightno+'/'+rec.acreg+' ALREADY IN SHEET — DUPLICATE');
-      return false;
+    for(let a=1;a<=MAX_ATTEMPTS;a++){
+      writeLock();
+      try{
+        const payload={...cur};delete payload.tries;delete payload.nextTry;delete payload.lastError;
+        const res=await fetchT(SHEET_URL,{method:'POST',headers:{'Content-Type':'text/plain'},body:JSON.stringify(payload)},REQ_TIMEOUT);
+        if(!res.ok)throw new Error('HTTP '+res.status);
+        const data=await res.json();
+        if(data.result==='ok'){markSynced(cur.id);return true;}
+        if(data.result==='duplicate'){
+          // Already in Sheet (e.g. earlier attempt succeeded but reply was lost) — mark synced so we stop retrying
+          markSynced(cur.id);
+          showToast('ℹ FLT '+cur.flightno+'/'+cur.acreg+' ALREADY IN SHEET — MARKED SYNCED');
+          return true;
+        }
+        if(data.result==='unauthorized'){
+          showToast('⚠ SYNC REJECTED — CONTACT ADMIN');
+          recordFail(cur.id,'Rejected by server',30*60*1000);
+          return false;
+        }
+        throw new Error('Unexpected server reply');
+      }catch(e){
+        lastErr=e&&e.name==='AbortError'?'Timed out':(e&&e.message)||'Network error';
+        if(a<MAX_ATTEMPTS&&navigator.onLine)await sleep(2000*a);
+      }
     }
-    if(data.result==='unauthorized'){
-      showToast('⚠ SYNC REJECTED — CONTACT ADMIN');
-      return false;
-    }
-    if(data.result==='ok'){
-      markSynced(rec.id);
-      return true;
-    }
-    // Unexpected response — do NOT mark synced, leave pending for retry
+    recordFail(cur.id,lastErr);
     return false;
-  }catch(e){
-    // Network error or CORS — do NOT fallback to no-cors (response unreadable → duplicates)
-    // Leave record as pending; next sync attempt will retry safely
-    return false;
-  }
-  finally{_syncing.delete(rec.id);}
+  }finally{_syncing.delete(cur.id);}   // always released
+}
+
+// Run a sync pass under the global lock. pick(r) decides which records to send.
+async function runSync(pick){
+  if(!acquireLock())return{ok:0,busy:true};
+  let ok=0;
+  try{
+    renderRecs();
+    const ids=getRecs().filter(pick).map(r=>r.id);
+    for(const id of ids){
+      if(!navigator.onLine)break;
+      writeLock();
+      const r=getRecs().find(x=>x.id===id);
+      if(!r||r.synced)continue;
+      if(await syncRecord(r))ok++;
+      renderRecs();
+    }
+  }catch(e){}
+  finally{releaseLock();renderRecs();updateBadge();}
+  return{ok};
+}
+function isDueAuto(r){
+  if(r.synced)return false;
+  if(r.nextTry&&r.nextTry>Date.now())return false;          // backoff
+  return !r.lockAt||r.lockAt<=Date.now();                    // grace period over
+}
+
+// AUTO: every 10 s + on reconnect/startup/app-visible
+async function checkAutoLock(){if(navigator.onLine)await autoSync();}
+setInterval(checkAutoLock,10000);
+async function autoSync(){
+  const res=await runSync(isDueAuto);
+  if(res.ok>0)showToast(`✓ SYNCED ${res.ok} RECORD${res.ok>1?'S':''}`);
 }
 async function syncAll(){
   if(!navigator.onLine){showToast('⚠ NO CONNECTION');return;}
   const btn=document.getElementById('sync-btn');
+  const orig=btn.innerHTML;
   btn.disabled=true;
   btn.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke-width="2.5" style="animation:spin 1s linear infinite"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> SYNCING...`;
-  // Manual "Sync All" is an explicit user action — syncs ALL unsynced records (pending or locked)
-  const pending=getRecs().filter(r=>!r.synced);
-  let ok=0;
-  for(const r of pending){if(await syncRecord(r))ok++;}
-  btn.disabled=false;
-  btn.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke-width="2.5"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg> SYNC ALL`;
-  showToast(ok>0?`✓ SYNCED ${ok} RECORD${ok>1?'S':''}`:'NOTHING TO SYNC');
-  renderRecs();updateBadge();
-}
-async function autoSync(){
-  // Only sync records whose 5-min grace period has expired (locked) — never touch pending/editable ones
-  const due=getRecs().filter(r=>!r.synced && r.lockAt && r.lockAt<=Date.now());
-  if(due.length===0)return;
-  let ok=0;
-  for(const r of due){if(await syncRecord(r))ok++;}
-  if(ok>0)showToast(`✓ SYNCED ${ok} RECORD${ok>1?'S':''}`);
-  renderRecs();updateBadge();
-}
-function markSynced(id){
-  const all=getRecs();
-  const idx=all.findIndex(r=>r.id===id);
-  if(idx>-1){all[idx].synced=true;localStorage.setItem('ifs_reports',JSON.stringify(all));}
-  updateBadge();
+  try{
+    // Manual "Sync All" is an explicit action: sends every unsynced record, ignoring grace time and backoff
+    const res=await runSync(r=>!r.synced);
+    if(res.busy)showToast('SYNC ALREADY RUNNING — TRY AGAIN SOON');
+    else showToast(res.ok>0?`✓ SYNCED ${res.ok} RECORD${res.ok>1?'S':''}`:'NOTHING TO SYNC');
+  }finally{btn.disabled=false;btn.innerHTML=orig;renderRecs();updateBadge();}
 }
 
 // RECORDS
@@ -815,13 +917,11 @@ function setEditModeUI(on){
 }
 
 async function syncNow(id){
-  const rec=getRecs().find(r=>r.id===id);
-  if(!rec)return;
   if(!navigator.onLine){showToast('⚠ NO CONNECTION');return;}
   showToast('SYNCING...');
-  const ok=await syncRecord(rec);
-  if(ok)showToast('✓ SYNCED');
-  renderRecs();updateBadge();
+  const res=await runSync(r=>r.id===id&&!r.synced);
+  if(res.busy)showToast('SYNC ALREADY RUNNING — TRY AGAIN SOON');
+  else showToast(res.ok>0?'✓ SYNCED':'⚠ NOT SYNCED — WILL RETRY');
 }
 
 function fmtCountdown(ms){
@@ -832,43 +932,65 @@ function fmtCountdown(ms){
   return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0');
 }
 
+function renderSyncBar(recs){
+  const bar=document.getElementById('sync-bar');if(!bar)return;
+  const pend=recs.filter(r=>!r.synced).length, done=recs.length-pend;
+  const failing=recs.filter(r=>!r.synced&&r.lastError).length;
+  const offline=!navigator.onLine||document.getElementById('netPill').classList.contains('pill-offline');
+  const last=Number(localStorage.getItem(LAST_SYNC_KEY)||0);
+  let cls='ok',txt='ALL SYNCED ✓';
+  if(_lockHeld){cls='busy';txt='🔄 SYNC IN PROGRESS';}
+  else if(pend>0&&offline){cls='warn';txt='OFFLINE — '+pend+' WAITING TO SYNC';}
+  else if(failing>0){cls='warn';txt='⚠ '+failing+' FAILED — AUTO RETRYING';}
+  else if(pend>0){cls='busy';txt='⏳ '+pend+' PENDING';}
+  const lastTxt=last?new Date(last).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'—';
+  bar.className='sync-bar '+cls;
+  bar.innerHTML='<b>'+txt+'</b><span>'+pend+' pending · '+done+' synced · last sync '+lastTxt+'</span>';
+}
 function renderRecs(){
   const list=document.getElementById('rec-list');
   const recs=getRecs();
   const pend=recs.filter(r=>!r.synced).length;
   document.getElementById('pend-lbl').textContent=pend>0?`${pend} PENDING`:'ALL SYNCED ✓';
+  renderSyncBar(recs);
   if(!recs.length){
     list.innerHTML='<div class="empty"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg><p>NO REPORTS SAVED YET</p></div>';
     return;
   }
   const now=Date.now();
+  const ICO_SYNC='<svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>';
   list.innerHTML=recs.map(r=>{
     const locked=isLocked(r);
     const remain=r.lockAt?r.lockAt-now:0;
     let statusHtml='';
     if(r.synced){
-      statusHtml='<span class="rbadge rbadge-s">SYNCED</span>';
-    } else if(locked){
-      statusHtml='<span class="rbadge rbadge-p">⏳ LOCKED — SYNCING</span>';
-    } else {
+      statusHtml='<span class="rbadge rbadge-s">✓ SYNCED</span>';
+    } else if(_syncing.has(r.id)){
+      statusHtml='<span class="rbadge rbadge-p">🔄 SYNCING…</span>';
+    } else if(!locked){
       statusHtml='<span class="rbadge rbadge-p" data-lockat="'+r.lockAt+'">⏱ '+fmtCountdown(remain)+'</span>';
+    } else if(r.lastError){
+      const w=r.nextTry&&r.nextTry>now?' · RETRY '+fmtCountdown(r.nextTry-now):'';
+      statusHtml='<span class="rbadge rbadge-f">⚠ FAILED'+w+'</span>';
+    } else {
+      statusHtml='<span class="rbadge rbadge-p">⏳ WAITING TO SYNC</span>';
     }
+    const syncBtn=r.synced?'':`<button class="sync-now-btn" onclick="syncNow(${r.id})" title="SYNC NOW">${ICO_SYNC}</button>`;
     const actionsHtml = locked
-      ? ''
+      ? syncBtn
       : `<button class="edit-btn" onclick="editRec(${r.id})" title="EDIT">
           <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
         </button>
-        <button class="sync-now-btn" onclick="syncNow(${r.id})" title="SYNC NOW">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
-        </button>
+        ${syncBtn}
         <button class="del-btn" onclick="deleteRec(${r.id})" title="DELETE">
           <svg viewBox="0 0 24 24" fill="none" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
         </button>`;
+    const err=(!r.synced&&r.lastError)?`<div class="rec-sub" style="color:var(--red);">Last error: ${r.lastError} (tries: ${r.tries||1})</div>`:'';
     return `
     <div class="rec-card">
       <div style="flex:1;min-width:0;">
         <div class="rec-title">FLIGHT ${r.flightno} · ${r.acreg}</div>
-        <div class="rec-sub">${r.date} · ${r.reporter} · ${r.comment||'—'}</div>
+        <div class="rec-sub">${r.date} · ${r.reporter} · ${r.comment||'—'}</div>${err}
       </div>
       <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
         ${statusHtml}
@@ -877,6 +999,8 @@ function renderRecs(){
     </div>`;
   }).join('');
 }
+// Refresh sync status every 5 s while the Records page is open
+setInterval(()=>{const p=document.getElementById('page-rec');if(p&&p.classList.contains('act'))renderRecs();},5000);
 
 // Live countdown tick — updates badge text every second without full re-render
 setInterval(()=>{
