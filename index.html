@@ -75,13 +75,25 @@ input:focus,select:focus,textarea:focus{outline:none;border-color:var(--navy);ba
 body.dark input,body.dark select,body.dark textarea{background:#111D2B;color:var(--text);}
 body.dark input:focus,body.dark select:focus,body.dark textarea:focus{background:#162030;border-color:var(--gold);}
 
-/* TIME INPUT */
-input[type=time]{
+/* TIME INPUT — 24-HR HH:MM dropdowns (always 24-hour, ignores phone setting) */
+.tsel{display:flex;align-items:center;gap:4px;}
+.tsel select{
+  flex:1;min-width:0;
   font-family:'Courier New',monospace;font-size:16px;font-weight:700;
-  text-align:center;letter-spacing:.08em;padding:10px 4px;
-  color:var(--navy);
+  text-align:center;text-align-last:center;letter-spacing:.08em;
+  padding:10px 2px;color:var(--navy);background-image:none;
 }
-body.dark input[type=time]{color:var(--gold);}
+body.dark .tsel select{color:var(--gold);}
+.tsep{font-weight:700;color:var(--muted);}
+.lbl-row{display:flex;align-items:center;justify-content:space-between;gap:6px;}
+.now-btn{
+  font-family:inherit;font-size:10px;font-weight:700;letter-spacing:.06em;
+  padding:3px 10px;border-radius:999px;border:1.5px solid var(--gold);
+  background:transparent;color:var(--gold-dk);cursor:pointer;
+  -webkit-tap-highlight-color:transparent;
+}
+.now-btn:active{background:var(--gold);color:#fff;}
+body.dark .now-btn{color:var(--gold);}
 
 /* ROW GRID — 2 col for time fields only */
 .row2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
@@ -292,28 +304,28 @@ body.dark .sch-add-btn{background:var(--gold);color:#1A1A2E;}
 
     <div class="field">
       <label>STD</label>
-      <input type="time" id="f-std">
+      <div class="tsel" id="f-std"></div>
     </div>
 
     <div class="row2">
       <div class="field">
-        <label>START LOADING</label>
-        <input type="time" id="f-start">
+        <div class="lbl-row"><label>START LOADING</label><button type="button" class="now-btn" onclick="nowFill('f-start')">NOW</button></div>
+        <div class="tsel" id="f-start"></div>
       </div>
       <div class="field">
-        <label>COMPLETE</label>
-        <input type="time" id="f-comp">
+        <div class="lbl-row"><label>COMPLETE</label><button type="button" class="now-btn" onclick="nowFill('f-comp')">NOW</button></div>
+        <div class="tsel" id="f-comp"></div>
       </div>
     </div>
 
     <div class="row2">
       <div class="field">
-        <label>CREW ARRIVAL</label>
-        <input type="time" id="f-carr">
+        <div class="lbl-row"><label>CREW ARRIVAL</label><button type="button" class="now-btn" onclick="nowFill('f-carr')">NOW</button></div>
+        <div class="tsel" id="f-carr"></div>
       </div>
       <div class="field">
-        <label>CREW CHECK</label>
-        <input type="time" id="f-cchk">
+        <div class="lbl-row"><label>CREW CHECK</label><button type="button" class="now-btn" onclick="nowFill('f-cchk')">NOW</button></div>
+        <div class="tsel" id="f-cchk"></div>
       </div>
     </div>
   </div>
@@ -455,6 +467,71 @@ function buildSchAcSelect(){
   const sel=document.getElementById('s-ac');
   if(!sel)return;
   sel.innerHTML='<option value="">SELECT...</option>'+AC_LIST.map(r=>`<option value="${r}">${r}</option>`).join('');
+}
+
+// ===== 24-HOUR TIME HELPERS (HH + MM dropdowns; value always "HH:MM") =====
+const TIME_IDS=['f-std','f-start','f-comp','f-carr','f-cchk'];
+function pad2(n){return String(n).padStart(2,'0');}
+function buildTimeSelects(){
+  let hOpts='<option value="">HH</option>',mOpts='<option value="">MM</option>';
+  for(let i=0;i<24;i++)hOpts+='<option value="'+pad2(i)+'">'+pad2(i)+'</option>';
+  for(let i=0;i<60;i++)mOpts+='<option value="'+pad2(i)+'">'+pad2(i)+'</option>';
+  document.querySelectorAll('.tsel').forEach(w=>{
+    w.innerHTML='<select id="'+w.id+'-h" aria-label="Hour (24-hour)">'+hOpts+'</select>'
+      +'<span class="tsep">:</span>'
+      +'<select id="'+w.id+'-m" aria-label="Minute">'+mOpts+'</select>';
+  });
+}
+buildTimeSelects();
+// 'empty' | 'full' | 'partial'
+function timeState(id){
+  const h=document.getElementById(id+'-h').value,m=document.getElementById(id+'-m').value;
+  return (h&&m)?'full':(!h&&!m)?'empty':'partial';
+}
+function getTime(id){
+  const h=document.getElementById(id+'-h').value,m=document.getElementById(id+'-m').value;
+  return (h&&m)?h+':'+m:'';
+}
+function setTime(id,val){
+  const mt=/^(\d{1,2}):(\d{2})/.exec(val||'');
+  if(!mt){clearTime(id);return;}
+  document.getElementById(id+'-h').value=pad2(+mt[1]);
+  document.getElementById(id+'-m').value=mt[2];
+}
+function clearTime(id){
+  document.getElementById(id+'-h').value='';
+  document.getElementById(id+'-m').value='';
+}
+function nowFill(id){
+  const d=new Date();
+  setTime(id,pad2(d.getHours())+':'+pad2(d.getMinutes()));
+}
+
+// ===== VALIDATION (24-hour wrap-around aware) =====
+function toMin(t){const a=t.split(':');return (+a[0])*60+(+a[1]);}
+// minutes from a to b, wrapped into (-720, +720]
+function wrapMin(a,b){let d=(((b-a)%1440)+1440)%1440;if(d>720)d-=1440;return d;}
+function validateTimes(t,comment){
+  const errors=[],warnings=[];
+  const {std,start,comp,carr,chk}=t;
+  if(start&&comp&&wrapMin(toMin(start),toMin(comp))<0)errors.push("Complete can't be before Start");
+  if(carr&&chk&&wrapMin(toMin(carr),toMin(chk))<0)errors.push("Check can't be before Arrival");
+  // Crew arrival later than STD-60 by more than 10 min, and no DELAY comment
+  if(carr&&std&&!/DELAY/.test(comment||'')){
+    const late=wrapMin(toMin(std)-60,toMin(carr));
+    if(late>10)warnings.push('Crew is late ('+late+' min after STD-60) — add a comment');
+  }
+  if(start&&comp){
+    const dur=wrapMin(toMin(start),toMin(comp));
+    if(dur>10)warnings.push('Loading took '+dur+' min — correct?');
+  }
+  if(start&&comp&&carr&&chk){
+    const all=[start,comp,carr,chk];
+    const same=all.every(x=>x===all[0]);
+    const round=all.every(x=>toMin(x)%5===0);
+    if(same||round)warnings.push('Times look estimated — please verify');
+  }
+  return {errors,warnings};
 }
 
 const REQ_ITEMS=['BAR CART','CIP ITEMS','DF CART','IFE BATTERY','RETORT / STB','WATER / JUICE','LINEN / BLANKET','CATERER ITEMS','BASKET','NEWSPAPER'];
@@ -622,10 +699,15 @@ function saveReport(){
   const rep=document.getElementById('f-reporter').value;
   const flt=document.getElementById('f-flt').value.trim();
   const ac=document.getElementById('f-ac-val').value||document.getElementById('f-ac-txt').value.trim();
-  const std=document.getElementById('f-std').value;
-  const start=document.getElementById('f-start').value;
-  const comp=document.getElementById('f-comp').value;
+  if(TIME_IDS.some(id=>timeState(id)==='partial')){showToast('⚠ SELECT BOTH HOUR AND MINUTE');return;}
+  const std=getTime('f-std');
+  const start=getTime('f-start');
+  const comp=getTime('f-comp');
+  const carrT=getTime('f-carr');
+  const chkT=getTime('f-cchk');
   if(!date||!rep||!flt||!ac||!std||!start||!comp){showToast('⚠ FILL IN REQUIRED FIELDS');return;}
+  const v=validateTimes({std,start,comp,carr:carrT,chk:chkT},document.getElementById('f-comment').value);
+  if(v.errors.length){alert('⛔ CANNOT SAVE\n\n• '+v.errors.join('\n• '));return;}
 
   const dupKey=`${date}|${flt.toUpperCase()}|${ac.toUpperCase()}`;
   // Duplicate check — skip the record currently being edited
@@ -637,6 +719,7 @@ function saveReport(){
      (r.acreg||'').trim().toUpperCase()===ac.toUpperCase()))
   );
   if(dup){showToast('⚠ DUPLICATE: FLT '+flt+' / '+ac+' ALREADY SAVED');return;}
+  if(v.warnings.length&&!confirm('⚠ PLEASE CHECK\n\n• '+v.warnings.join('\n• ')+'\n\nSAVE ANYWAY?'))return;
 
   _saving=true;
   const btn=document.querySelector('.sub-btn');
@@ -647,8 +730,8 @@ function saveReport(){
   const fields={
     dupKey,token:'MAI-IFS-2026',date,reporter:rep,flightno:flt,acreg:ac,
     std,start,complete:comp,
-    crewArr:document.getElementById('f-carr').value,
-    crewChk:document.getElementById('f-cchk').value,
+    crewArr:carrT,
+    crewChk:chkT,
     comment:document.getElementById('f-comment').value,
     remark:document.getElementById('f-remark').value.trim(),
     requiredList:REQ_ITEMS.filter(i=>reqSt[i]).join(', ')
@@ -880,11 +963,11 @@ function editRec(id){
   document.getElementById('f-flt').value=rec.flightno;
   document.getElementById('f-ac-txt').value=rec.acreg;
   document.getElementById('f-ac-val').value=rec.acreg;
-  document.getElementById('f-std').value=rec.std;
-  document.getElementById('f-start').value=rec.start;
-  document.getElementById('f-comp').value=rec.complete;
-  document.getElementById('f-carr').value=rec.crewArr||'';
-  document.getElementById('f-cchk').value=rec.crewChk||'';
+  setTime('f-std',rec.std);
+  setTime('f-start',rec.start);
+  setTime('f-comp',rec.complete);
+  setTime('f-carr',rec.crewArr||'');
+  setTime('f-cchk',rec.crewChk||'');
   document.getElementById('f-comment').value=rec.comment||'';
   document.getElementById('f-remark').value=rec.remark||'';
   const checkedItems=(rec.requiredList||'').split(', ').filter(Boolean);
@@ -943,7 +1026,7 @@ function renderSyncBar(recs){
   else if(pend>0&&offline){cls='warn';txt='OFFLINE — '+pend+' WAITING TO SYNC';}
   else if(failing>0){cls='warn';txt='⚠ '+failing+' FAILED — AUTO RETRYING';}
   else if(pend>0){cls='busy';txt='⏳ '+pend+' PENDING';}
-  const lastTxt=last?new Date(last).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'—';
+  const lastTxt=last?(d=>pad2(d.getHours())+':'+pad2(d.getMinutes()))(new Date(last)):'—';
   bar.className='sync-bar '+cls;
   bar.innerHTML='<b>'+txt+'</b><span>'+pend+' pending · '+done+' synced · last sync '+lastTxt+'</span>';
 }
@@ -1020,7 +1103,8 @@ function updateBadge(){
 
 // RESET
 function resetForm(){
-  ['f-flt','f-ac-txt','f-ac-val','f-std','f-start','f-comp','f-carr','f-cchk','f-remark'].forEach(id=>document.getElementById(id).value='');
+  ['f-flt','f-ac-txt','f-ac-val','f-remark'].forEach(id=>document.getElementById(id).value='');
+  TIME_IDS.forEach(clearTime);
   document.getElementById('f-comment').value='';
   document.getElementById('f-reporter').value='';
   REQ_ITEMS.forEach(i=>{
@@ -1177,12 +1261,17 @@ function renderSch(){
 function prefillFromSch(id){
   const rec=getSch().find(r=>r.id===id);
   if(!rec||rec.done)return;
-  // Pre-fill NEW REPORT form with flight+ac from schedule
-  document.getElementById('f-flt').value=rec.flt;
-  document.getElementById('f-ac-txt').value=rec.ac;
-  document.getElementById('f-ac-val').value=rec.ac;
+  // Pre-fill NEW REPORT form with flight no from schedule
+  // Flight no only. AC REG and STD are never taken from the schedule.
+  const fltEl=document.getElementById('f-flt');
+  if(fltEl.value.trim()!==String(rec.flt).trim()){
+    // different flight than what was typed -> clear any AC REG left from earlier
+    document.getElementById('f-ac-txt').value='';
+    document.getElementById('f-ac-val').value='';
+  }
+  fltEl.value=rec.flt;
   showPage('new');
-  showToast('FLT '+rec.flt+' / '+rec.ac+' — FILL IN TIMES');
+  showToast('FLT '+rec.flt+' — SELECT AC REG & FILL IN TIMES');
   window.scrollTo({top:0,behavior:'smooth'});
 }
 
