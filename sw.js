@@ -1,4 +1,4 @@
-const CACHE = 'ifs-report-v6';
+const CACHE = 'ifs-report-v7';
 const ASSETS = ['./', './index.html'];
 
 // On install: cache the app shell immediately, activate right away
@@ -37,7 +37,7 @@ self.addEventListener('fetch', e => {
     e.respondWith((async () => {
       const cache = await caches.open(CACHE);
       const cached = (await cache.match(e.request)) || (await cache.match('./index.html'));
-      const net = fetch(e.request).then(res => {
+      const net = fetch(e.request, {cache:'no-cache'}).then(res => {
         if (res && res.status === 200) cache.put(e.request, res.clone());
         return res;
       });
