@@ -518,6 +518,18 @@ function validateTimes(t,comment){
   // REV4 §8 — only a REMARK overrides these (STATUS comment does not)
   if(std&&start&&wrapMin(toMin(std),toMin(start))>0)gated.push('Loading starts after STD');
   if(carr&&start&&wrapMin(toMin(carr),toMin(start))>0)gated.push('Crew check starts before loading');
+  // REV4.1: long crew check (soft, plain warning)
+  if(carr&&chk){
+    const cd=wrapMin(toMin(carr),toMin(chk));
+    if(cd>20)warnings.push('Crew check took '+cd+' min — correct?');
+  }
+  // REV4.1: times detached from STD (soft, once). Loading pair skipped when Rule A already gates start-after-STD
+  if(std){
+    const ruleA=start&&wrapMin(toMin(std),toMin(start))>0;
+    const chkList=[carr,chk];
+    if(!ruleA)chkList.push(start,comp);
+    if(chkList.some(x=>x&&Math.abs(wrapMin(toMin(std),toMin(x)))>120))warnings.push('Times far from STD — correct?');
+  }
   if(start&&comp){
     const dur=wrapMin(toMin(start),toMin(comp));
     if(dur>10)warnings.push('Loading took '+dur+' min — correct?');
@@ -551,7 +563,7 @@ function loadTheme(){
 }
 
 // INIT
-const APP_VERSION='1.4.1';
+const APP_VERSION='1.4.2';
 
 // Auto-update check: compare version with Github raw file
 async function checkForUpdate(){
@@ -703,12 +715,20 @@ function saveReport(){
   const comp=getTime('f-comp');
   const carrT=getTime('f-carr');
   const chkT=getTime('f-cchk');
-  if(!date||!rep||!flt||!acRaw||!std||!start||!comp){showToast('⚠ FILL IN REQUIRED FIELDS');return;}
+  if(!date||!rep||!flt||!acRaw||!std||!start||!comp||!document.getElementById('f-comment').value){showToast('⚠ FILL IN REQUIRED FIELDS');return;}
   if(!ac){showToast('⚠ SELECT AC REG FROM THE LIST');return;}
   const v=validateTimes({std,start,comp,carr:carrT,chk:chkT},document.getElementById('f-comment').value);
   if(v.errors.length){alert('⛔ CANNOT SAVE\n\n• '+v.errors.join('\n• '));return;}
-  if(v.gated.length&&!document.getElementById('f-remark').value.trim()){
-    alert('⛔ CANNOT SAVE\n\n• '+v.gated.join('\n• ')+'\n\nCorrect the times, or add a REMARK (e.g. "Retimed to 17:25").');return;}
+  const cmt=document.getElementById('f-comment').value;
+  if(!document.getElementById('f-remark').value.trim()){
+    const reasons=[...v.gated],guide=[];
+    if(v.gated.length)guide.push('Correct the times, or add a REMARK (e.g. "Retimed to 17:25").');
+    if(cmt&&cmt!=='ON TIME'){
+      reasons.push(cmt+' needs a REMARK explaining why');
+      guide.push('Add a REMARK, or change the comment to ON TIME if the flight departed on time.');
+    }
+    if(reasons.length){alert('⛔ CANNOT SAVE\n\n• '+reasons.join('\n• ')+'\n\n'+guide.join('\n'));return;}
+  }
 
   const dupKey=`${date}|${flt.toUpperCase()}|${ac.toUpperCase()}`;
   // Duplicate check — skip the record currently being edited

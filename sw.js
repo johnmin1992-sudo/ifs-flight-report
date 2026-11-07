@@ -1,4 +1,4 @@
-const CACHE = 'ifs-report-v8';
+const CACHE = 'ifs-report-v9';
 const ASSETS = ['./', './index.html'];
 
 // On install: cache the app shell immediately, activate right away
