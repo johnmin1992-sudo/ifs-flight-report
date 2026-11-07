@@ -344,7 +344,6 @@ body.dark .sch-add-btn{background:var(--gold);color:#1A1A2E;}
         <option value="AIC DELAY">AIC DELAY</option>
         <option value="GOD DELAY">GOD DELAY</option>
         <option value="SECURITY DELAY">SECURITY DELAY</option>
-        <option value="CREW DELAY">CREW DELAY</option>
         <option value="LIFE DELAY">LIFE DELAY</option>
         <option value="IFCS DELAY">IFCS DELAY</option>
       </select>
@@ -512,15 +511,13 @@ function toMin(t){const a=t.split(':');return (+a[0])*60+(+a[1]);}
 // minutes from a to b, wrapped into (-720, +720]
 function wrapMin(a,b){let d=(((b-a)%1440)+1440)%1440;if(d>720)d-=1440;return d;}
 function validateTimes(t,comment){
-  const errors=[],warnings=[];
+  const errors=[],warnings=[],gated=[]; // gated = soft rules that need a REMARK to keep (REV4 §8)
   const {std,start,comp,carr,chk}=t;
   if(start&&comp&&wrapMin(toMin(start),toMin(comp))<0)errors.push("Complete can't be before Start");
-  if(carr&&chk&&wrapMin(toMin(carr),toMin(chk))<0)errors.push("Check can't be before Arrival");
-  // Crew arrival later than STD-60 by more than 10 min, and no DELAY comment
-  if(carr&&std&&!/DELAY/.test(comment||'')){
-    const late=wrapMin(toMin(std)-60,toMin(carr));
-    if(late>10)warnings.push('Crew is late ('+late+' min after STD-60) — add a comment');
-  }
+  if(carr&&chk&&wrapMin(toMin(carr),toMin(chk))<0)errors.push("Check Complete can't be before Start Check");
+  // REV4 §8 — only a REMARK overrides these (STATUS comment does not)
+  if(std&&start&&wrapMin(toMin(std),toMin(start))>0)gated.push('Loading starts after STD');
+  if(carr&&start&&wrapMin(toMin(carr),toMin(start))>0)gated.push('Crew check starts before loading');
   if(start&&comp){
     const dur=wrapMin(toMin(start),toMin(comp));
     if(dur>10)warnings.push('Loading took '+dur+' min — correct?');
@@ -531,7 +528,7 @@ function validateTimes(t,comment){
     const round=all.every(x=>toMin(x)%5===0);
     if(same||round)warnings.push('Times look estimated — please verify');
   }
-  return {errors,warnings};
+  return {errors,warnings,gated};
 }
 
 const REQ_ITEMS=['BAR CART','CIP ITEMS','DF CART','IFE BATTERY','RETORT / STB','WATER / JUICE','LINEN / BLANKET','CATERER ITEMS','BASKET','NEWSPAPER'];
@@ -554,7 +551,7 @@ function loadTheme(){
 }
 
 // INIT
-const APP_VERSION='1.4.0';
+const APP_VERSION='1.4.1';
 
 // Auto-update check: compare version with Github raw file
 async function checkForUpdate(){
@@ -698,16 +695,20 @@ function saveReport(){
   const date=document.getElementById('f-date').value;
   const rep=document.getElementById('f-reporter').value;
   const flt=document.getElementById('f-flt').value.trim();
-  const ac=document.getElementById('f-ac-val').value||document.getElementById('f-ac-txt').value.trim();
+  const acRaw=(document.getElementById('f-ac-txt').value.trim()||document.getElementById('f-ac-val').value).trim();
+  const ac=AC_LIST.find(r=>r.toUpperCase()===acRaw.toUpperCase())||'';
   if(TIME_IDS.some(id=>timeState(id)==='partial')){showToast('⚠ SELECT BOTH HOUR AND MINUTE');return;}
   const std=getTime('f-std');
   const start=getTime('f-start');
   const comp=getTime('f-comp');
   const carrT=getTime('f-carr');
   const chkT=getTime('f-cchk');
-  if(!date||!rep||!flt||!ac||!std||!start||!comp){showToast('⚠ FILL IN REQUIRED FIELDS');return;}
+  if(!date||!rep||!flt||!acRaw||!std||!start||!comp){showToast('⚠ FILL IN REQUIRED FIELDS');return;}
+  if(!ac){showToast('⚠ SELECT AC REG FROM THE LIST');return;}
   const v=validateTimes({std,start,comp,carr:carrT,chk:chkT},document.getElementById('f-comment').value);
   if(v.errors.length){alert('⛔ CANNOT SAVE\n\n• '+v.errors.join('\n• '));return;}
+  if(v.gated.length&&!document.getElementById('f-remark').value.trim()){
+    alert('⛔ CANNOT SAVE\n\n• '+v.gated.join('\n• ')+'\n\nCorrect the times, or add a REMARK (e.g. "Retimed to 17:25").');return;}
 
   const dupKey=`${date}|${flt.toUpperCase()}|${ac.toUpperCase()}`;
   // Duplicate check — skip the record currently being edited
@@ -719,7 +720,8 @@ function saveReport(){
      (r.acreg||'').trim().toUpperCase()===ac.toUpperCase()))
   );
   if(dup){showToast('⚠ DUPLICATE: FLT '+flt+' / '+ac+' ALREADY SAVED');return;}
-  if(v.warnings.length&&!confirm('⚠ PLEASE CHECK\n\n• '+v.warnings.join('\n• ')+'\n\nSAVE ANYWAY?'))return;
+  const allWarn=[...v.gated,...v.warnings];
+  if(allWarn.length&&!confirm('⚠ PLEASE CHECK\n\n• '+allWarn.join('\n• ')+'\n\nSAVE ANYWAY?'))return;
 
   _saving=true;
   const btn=document.querySelector('.sub-btn');
